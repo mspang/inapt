@@ -14,7 +14,7 @@ using namespace std;
     action pkgend { te = p; }
 
     action add_list {
-      tmp_list.push_back(xstrndup(ts, te-ts+1));
+      tmp_list.push_back(xstrndup(ts, te - ts + 1));
     }
 
     action clear_list {
@@ -40,7 +40,6 @@ using namespace std;
     package_list = ((space+ package_name)+ %add_list space*) >clear_list;
     cmd_install = 'install' package_list ';' @install;
     cmd_remove = 'remove' package_list ';' @remove;
-
     main := (cmd_install | cmd_remove | space)*;
 }%%
 
@@ -63,33 +62,30 @@ void scanner(vector<char *> &add_list, vector<char *> &del_list)
         char *p = buf + have, *pe, *eof = 0;
         int len, space = BUFSIZE - have;
 
-        if ( space == 0 ) {
-            /* We've used up the entire buffer storing an already-parsed token
-             * prefix that must be preserved. */
-            fprintf(stderr, "OUT OF BUFFER SPACE\n" );
+        if (space == 0) {
+            fprintf(stderr, "OUT OF BUFFER SPACE\n");
             exit(1);
         }
 
         len = fread(p, 1, space, stdin);
         pe = p + len;
 
-        /* Check if this is the end of file. */
-        if ( len < space ) {
+        if (len < space) {
             eof = pe;
             done = 1;
         }
 
         %% write exec;
 
-        if ( cs == inapt_error ) {
-            fprintf(stderr, "PARSE ERROR\n" );
+        if (cs == inapt_error) {
+            fprintf(stderr, "PARSE ERROR\n");
             break;
         }
 
         have = 0;
 
         if (ts) {
-            have = pe -ts;
+            have = pe - ts;
             memmove(buf, ts, have);
             te = buf + (te - ts);
             ts = buf;
@@ -97,6 +93,7 @@ void scanner(vector<char *> &add_list, vector<char *> &del_list)
     }
 }
 
+/*
 int main()
 {
     vector<char *> add_list;
@@ -108,3 +105,4 @@ int main()
       printf("remove %s\n", *i);
     return 0;
 }
+*/

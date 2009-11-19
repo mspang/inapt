@@ -14,6 +14,7 @@
 #include <apt-pkg/acquire-item.h>
 
 #include "acqprogress.h"
+#include "awesome.h"
 
 using namespace std;
 
@@ -172,6 +173,9 @@ bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
 
 int main(int argc, char *argv[]) {
 
+    vector<char *> add_list;
+    vector<char *> del_list;
+
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
 
@@ -188,12 +192,30 @@ int main(int argc, char *argv[]) {
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
 
+    scanner(add_list, del_list);
+
+    for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++) {
+      printf("install %s\n", *i);
+      DCache->MarkInstall(cache->FindPkg(*i), true);
+    }
+    for (vector<char *>::iterator i = del_list.begin(); i < del_list.end(); i++) {
+      printf("remove %s\n", *i);
+      DCache->MarkDelete(cache->FindPkg(*i), false);
+    }
+    for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++) {
+      printf("install %s\n", *i);
+      DCache->MarkInstall(cache->FindPkg(*i), false);
+    }
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, "nondownloadable packages:\n");
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
        if (i.CurrentVer() && !i.CurrentVer().Downloadable()) {
 	       fprintf(stderr, "%s ", i.Name());
 	       fprintf(stderr, "%s\n", DCache->GetCandidateVer(i).VerStr());
        }
     }
+    /*
 
     DCache->MarkInstall(cache->FindPkg("zsh"), true);
     DCache->MarkInstall(cache->FindPkg("ssmtp"), true);
@@ -203,6 +225,7 @@ int main(int argc, char *argv[]) {
     DCache->MarkDelete(cache->FindPkg("gnome-games"), false);
     DCache->MarkInstall(cache->FindPkg("ssmtp"), false);
     DCache->MarkInstall(cache->FindPkg("postfix"), false);
+    */
 
     fprintf(stderr, "\n");
     fprintf(stderr, "inst %lu del %lu keep %lu broken %lu bad %lu\n",
@@ -221,9 +244,11 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\n");
 
     pkgProblemResolver fix (DCache);
-    fix.Protect(cache->FindPkg("ssmtp"));
-    fix.Protect(cache->FindPkg("gnome-games"));
-    fix.Protect(cache->FindPkg("network-manager"));
+
+    for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++)
+	    fix.Protect(cache->FindPkg(*i));
+    for (vector<char *>::iterator i = del_list.begin(); i < del_list.end(); i++)
+	    fix.Protect(cache->FindPkg(*i));
     fix.Resolve();
 
     fprintf(stderr, "\n");
@@ -242,7 +267,6 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "\n");
-
 
     InstallPackages(cachef);
 }
