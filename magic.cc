@@ -201,6 +201,8 @@ int main(int argc, char *argv[]) {
     DCache->MarkInstall(cache->FindPkg("postfix"), true);
     DCache->MarkDelete(cache->FindPkg("network-manager"), false);
     DCache->MarkDelete(cache->FindPkg("gnome-games"), false);
+    DCache->MarkInstall(cache->FindPkg("ssmtp"), false);
+    DCache->MarkInstall(cache->FindPkg("postfix"), false);
 
     fprintf(stderr, "\n");
     fprintf(stderr, "inst %lu del %lu keep %lu broken %lu bad %lu\n",
