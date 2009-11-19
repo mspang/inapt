@@ -43,7 +43,7 @@ using namespace std;
     main := (cmd_install | cmd_remove | space)*;
 }%%
 
-%% write data nofinal;
+%% write data;
 
 #define BUFSIZE 128
 
@@ -79,7 +79,7 @@ void scanner(vector<char *> &add_list, vector<char *> &del_list)
 
         if (cs == inapt_error) {
             fprintf(stderr, "PARSE ERROR\n");
-            break;
+	    exit(1);
         }
 
         have = 0;
@@ -90,6 +90,11 @@ void scanner(vector<char *> &add_list, vector<char *> &del_list)
             te = buf + (te - ts);
             ts = buf;
         }
+    }
+
+    if (cs < inapt_first_final) {
+       fprintf(stderr, "UNEXPECTED EOF\n");
+       exit(1);
     }
 }
 
