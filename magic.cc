@@ -215,17 +215,6 @@ int main(int argc, char *argv[]) {
 	       fprintf(stderr, "%s\n", DCache->GetCandidateVer(i).VerStr());
        }
     }
-    /*
-
-    DCache->MarkInstall(cache->FindPkg("zsh"), true);
-    DCache->MarkInstall(cache->FindPkg("ssmtp"), true);
-    DCache->MarkInstall(cache->FindPkg("gnome"), true);
-    DCache->MarkInstall(cache->FindPkg("postfix"), true);
-    DCache->MarkDelete(cache->FindPkg("network-manager"), false);
-    DCache->MarkDelete(cache->FindPkg("gnome-games"), false);
-    DCache->MarkInstall(cache->FindPkg("ssmtp"), false);
-    DCache->MarkInstall(cache->FindPkg("postfix"), false);
-    */
 
     fprintf(stderr, "\n");
     fprintf(stderr, "inst %lu del %lu keep %lu broken %lu bad %lu\n",
