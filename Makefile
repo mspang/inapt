@@ -1,7 +1,7 @@
 all: magic awesome awesome.png
 magic: magic.cc
-	g++ -o magic -g3 -Wall -Werror -lapt-pkg -lapt-inst magic.cc
-awesome: awesome.c
+	g++ -o magic -g3 -Wall -Werror -lapt-pkg -lapt-inst magic.cc acqprogress.cc
+awesome: awesome.c acqprogress.cc
 	g++ -o awesome -g3 -Wall -Werror -lapt-pkg -lapt-inst awesome.c
 awesome.c: awesome.rl
 	ragel awesome.rl

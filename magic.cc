@@ -13,6 +13,8 @@
 #include <apt-pkg/sptr.h>
 #include <apt-pkg/acquire-item.h>
 
+#include "acqprogress.h"
+
 using namespace std;
 
 
@@ -54,7 +56,9 @@ bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
          return _error->Error(("Unable to lock the download directory"));
    }
 
-   pkgAcquire Fetcher;
+   unsigned int width = 80;
+   AcqTextStatus status (width, 0);
+   pkgAcquire Fetcher (&status);
 
    pkgSourceList List;
    if (List.ReadMainList() == false)
