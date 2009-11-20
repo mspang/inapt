@@ -203,7 +203,6 @@ int main(int argc, char *argv[]) {
       DCache->MarkDelete(cache->FindPkg(*i), false);
     }
     for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++) {
-      printf("install %s\n", *i);
       DCache->MarkInstall(cache->FindPkg(*i), false);
     }
 

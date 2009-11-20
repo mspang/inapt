@@ -36,11 +36,14 @@ using namespace std;
       tmp_list.clear();
     }
 
+    newline = '\n' @{ curline += 1; };
+    comment = '#' (any - newline)* newline;
+    whitespace = [\t\v\f\r ] | comment | newline;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >pkgstart @pkgend;
-    package_list = ((space+ package_name)+ %add_list space*) >clear_list;
+    package_list = ((whitespace+ package_name)+ %add_list whitespace*) >clear_list;
     cmd_install = 'install' package_list ';' @install;
     cmd_remove = 'remove' package_list ';' @remove;
-    main := (cmd_install | cmd_remove | space)*;
+    main := (cmd_install | cmd_remove | whitespace)*;
 }%%
 
 %% write data;
@@ -52,6 +55,7 @@ void scanner(vector<char *> &add_list, vector<char *> &del_list)
     static char buf[BUFSIZE];
     int cs, have = 0;
     int done = 0;
+    int curline = 1;
     char *ts = 0, *te = 0;
 
     vector<char *> tmp_list;
