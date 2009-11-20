@@ -2,3 +2,6 @@
 *.log
 *.pdf
 magic
+/awesome.c
+/awesome.dot
+/awesome.png
