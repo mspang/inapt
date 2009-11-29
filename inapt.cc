@@ -14,7 +14,7 @@
 #include <apt-pkg/acquire-item.h>
 
 #include "acqprogress.h"
-#include "awesome.h"
+#include "parser.h"
 
 using namespace std;
 

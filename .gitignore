@@ -1,7 +1,8 @@
+*.o
 *.aux
 *.log
 *.pdf
-magic
-/awesome.c
-/awesome.dot
-/awesome.png
+inapt
+/parser.cc
+/parser.dot
+/parser.png
