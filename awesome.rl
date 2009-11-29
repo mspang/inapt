@@ -36,14 +36,18 @@ using namespace std;
       tmp_list.clear();
     }
 
+    action misc_error {
+        fprintf(stderr, "%s: %d: Syntax Error\n", "stdin", curline);
+    }
+
     newline = '\n' @{ curline += 1; };
     comment = '#' (any - newline)* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >pkgstart @pkgend;
     package_list = ((whitespace+ package_name)+ %add_list whitespace*) >clear_list;
-    cmd_install = 'install' package_list ';' @install;
-    cmd_remove = 'remove' package_list ';' @remove;
-    main := (cmd_install | cmd_remove | whitespace)*;
+    cmd_install = ('install' package_list ';') @install;
+    cmd_remove = ('remove' package_list ';') @remove;
+    main := (cmd_install | cmd_remove | whitespace)* $err(misc_error);
 }%%
 
 %% write data;
