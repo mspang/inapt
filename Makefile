@@ -18,5 +18,5 @@ parser.png: parser.dot
 	dot -Tpng -o parser.png parser.dot
 
 clean:
-	rm -f *.o inapt parser.png parser.dot
+	rm -f *.o inapt parser.png parser.dot parser.cc
 
