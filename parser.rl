@@ -16,17 +16,18 @@ using namespace std;
 
     action add_list {
       tmp_action.package = xstrndup(ts, p - ts);
+      tmp_action.action = curaction;
       tmp_action.linenum = curline;
       tmp_action.filename = curfile;
       actions->push_back(tmp_action);
     }
 
     action install {
-        tmp_action.action = inapt_action::INSTALL;
+        curaction = inapt_action::INSTALL;
     }
 
     action remove {
-        tmp_action.action = inapt_action::REMOVE;
+        curaction = inapt_action::REMOVE;
     }
 
     action misc_error {
@@ -54,11 +55,10 @@ void scanner(vector<inapt_action> *actions)
     int done = 0;
     int curline = 1;
     char *ts = 0, *te = 0;
-    //int tl = 0;
 
-    vector<char *> tmp_list;
     inapt_action tmp_action;
     const char *curfile = "stdin";
+    enum inapt_action::action_t curaction = inapt_action::UNSET;
 
     %% write init;
 

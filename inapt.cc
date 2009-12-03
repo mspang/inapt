@@ -14,6 +14,7 @@
 #include <apt-pkg/acquire-item.h>
 
 #include "inapt.h"
+#include "util.h"
 #include "acqprogress.h"
 
 using namespace std;
@@ -198,6 +199,8 @@ int main(int argc, char *argv[]) {
                 break;
             case inapt_action::REMOVE:
                 break;
+            default:
+                fatal("uninitialized action");
         }
     }
 
@@ -211,6 +214,8 @@ int main(int argc, char *argv[]) {
                 printf("remove %s %s:%d\n", i->package, i->filename, i->linenum);
                 DCache->MarkDelete(cache->FindPkg(i->package), false);
                 break;
+            default:
+                fatal("uninitialized action");
         }
     }
 

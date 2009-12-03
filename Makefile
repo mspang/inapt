@@ -5,7 +5,7 @@ override CFLAGS  += -std=gnu99 $(INCLUDES)
 
 all: inapt parser.png
 
-inapt: inapt.o parser.o acqprogress.o
+inapt: inapt.o parser.o acqprogress.o util.o
 	g++ -o inapt -g3 -Wall -Werror -lapt-pkg -lapt-inst $^
 
 parser.cc: parser.rl
