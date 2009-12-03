@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <vector>
 
+#include "inapt.h"
+
 using namespace std;
 
 #define xstrndup strndup
@@ -11,42 +13,33 @@ using namespace std;
     machine inapt;
 
     action pkgstart { ts = p; }
-    action pkgend { te = p; }
 
     action add_list {
-      tmp_list.push_back(xstrndup(ts, te - ts + 1));
-    }
-
-    action clear_list {
-      while (tmp_list.size()) {
-        free(tmp_list.back());
-        tmp_list.pop_back();
-      }
+      tmp_action.package = xstrndup(ts, p - ts);
+      tmp_action.linenum = curline;
+      tmp_action.filename = curfile;
+      actions->push_back(tmp_action);
     }
 
     action install {
-      for (vector<char *>::iterator i = tmp_list.begin(); i < tmp_list.end(); i++)
-        add_list.push_back(*i);
-      tmp_list.clear();
+        tmp_action.action = inapt_action::INSTALL;
     }
 
     action remove {
-      for (vector<char *>::iterator i = tmp_list.begin(); i < tmp_list.end(); i++)
-        del_list.push_back(*i);
-      tmp_list.clear();
+        tmp_action.action = inapt_action::REMOVE;
     }
 
     action misc_error {
-        fprintf(stderr, "%s: %d: Syntax Error\n", "stdin", curline);
+        fprintf(stderr, "%s: %d: Syntax Error\n", curfile, curline);
     }
 
-    newline = '\n' @{ curline += 1; };
+    newline = '\n' %{ curline += 1; };
     comment = '#' (any - newline)* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
-    package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >pkgstart @pkgend;
-    package_list = ((whitespace+ package_name)+ %add_list whitespace*) >clear_list;
-    cmd_install = ('install' package_list ';') @install;
-    cmd_remove = ('remove' package_list ';') @remove;
+    package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >pkgstart;
+    package_list = ((whitespace+ package_name)+ %add_list whitespace*);
+    cmd_install = ('install' package_list ';') >install;
+    cmd_remove = ('remove' package_list ';') >remove;
     main := (cmd_install | cmd_remove | whitespace)* $err(misc_error);
 }%%
 
@@ -54,15 +47,18 @@ using namespace std;
 
 #define BUFSIZE 128
 
-void scanner(vector<char *> &add_list, vector<char *> &del_list)
+void scanner(vector<inapt_action> *actions)
 {
     static char buf[BUFSIZE];
     int cs, have = 0;
     int done = 0;
     int curline = 1;
     char *ts = 0, *te = 0;
+    //int tl = 0;
 
     vector<char *> tmp_list;
+    inapt_action tmp_action;
+    const char *curfile = "stdin";
 
     %% write init;
 
@@ -105,17 +101,3 @@ void scanner(vector<char *> &add_list, vector<char *> &del_list)
        exit(1);
     }
 }
-
-/*
-int main()
-{
-    vector<char *> add_list;
-    vector<char *> del_list;
-    scanner(add_list, del_list);
-    for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++)
-      printf("install %s\n", *i);
-    for (vector<char *>::iterator i = del_list.begin(); i < del_list.end(); i++)
-      printf("remove %s\n", *i);
-    return 0;
-}
-*/

@@ -13,11 +13,10 @@
 #include <apt-pkg/sptr.h>
 #include <apt-pkg/acquire-item.h>
 
+#include "inapt.h"
 #include "acqprogress.h"
-#include "parser.h"
 
 using namespace std;
-
 
 bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
                      bool Safety = true)
@@ -170,11 +169,9 @@ bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
    }
 }
 
-
 int main(int argc, char *argv[]) {
 
-    vector<char *> add_list;
-    vector<char *> del_list;
+    vector<inapt_action> actions;
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
@@ -192,18 +189,29 @@ int main(int argc, char *argv[]) {
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
 
-    scanner(add_list, del_list);
+    scanner(&actions);
 
-    for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++) {
-      printf("install %s\n", *i);
-      DCache->MarkInstall(cache->FindPkg(*i), true);
+    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
+        switch(i->action) {
+            case inapt_action::INSTALL:
+                DCache->MarkInstall(cache->FindPkg(i->package), true);
+                break;
+            case inapt_action::REMOVE:
+                break;
+        }
     }
-    for (vector<char *>::iterator i = del_list.begin(); i < del_list.end(); i++) {
-      printf("remove %s\n", *i);
-      DCache->MarkDelete(cache->FindPkg(*i), false);
-    }
-    for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++) {
-      DCache->MarkInstall(cache->FindPkg(*i), false);
+
+    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
+        switch(i->action) {
+            case inapt_action::INSTALL:
+                printf("install %s %s:%d\n", i->package, i->filename, i->linenum);
+                DCache->MarkInstall(cache->FindPkg(i->package), false);
+                break;
+            case inapt_action::REMOVE:
+                printf("remove %s %s:%d\n", i->package, i->filename, i->linenum);
+                DCache->MarkDelete(cache->FindPkg(i->package), false);
+                break;
+        }
     }
 
     fprintf(stderr, "\n");
@@ -233,10 +241,10 @@ int main(int argc, char *argv[]) {
 
     pkgProblemResolver fix (DCache);
 
-    for (vector<char *>::iterator i = add_list.begin(); i < add_list.end(); i++)
-	    fix.Protect(cache->FindPkg(*i));
-    for (vector<char *>::iterator i = del_list.begin(); i < del_list.end(); i++)
-	    fix.Protect(cache->FindPkg(*i));
+    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++)
+	    fix.Protect(cache->FindPkg(i->package));
+    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++)
+	    fix.Protect(cache->FindPkg(i->package));
     fix.Resolve();
 
     fprintf(stderr, "\n");
