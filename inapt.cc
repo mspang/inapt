@@ -29,13 +29,13 @@ static struct option opts[] = {
 bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
                      bool Safety = true)
 {
-   if (_config->FindB("APT::Get::Purge",false) == true)
+   if (_config->FindB("APT::Get::Purge", false) == true)
    {
       pkgCache::PkgIterator I = Cache->PkgBegin();
       for (; I.end() == false; I++)
       {
          if (I.Purge() == false && Cache[I].Mode == pkgDepCache::ModeDelete)
-            Cache->MarkDelete(I,true);
+            Cache->MarkDelete(I, true);
       }
    }
 
@@ -182,7 +182,6 @@ static void usage() {
     exit(2);
 }
 
-
 int main(int argc, char *argv[]) {
     int opt;
     char *filename = NULL;
@@ -224,7 +223,6 @@ int main(int argc, char *argv[]) {
     parser(filename, &actions);
 
     for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
-        debug("finding %s", i->package);
         pkgCache::PkgIterator pkg = cache->FindPkg(i->package);
         if (pkg.end())
             fatal("%s:%d: No such package: %s", i->filename, i->linenum, i->package);
@@ -235,8 +233,10 @@ int main(int argc, char *argv[]) {
         pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)i->obj;
         switch (i->action) {
             case inapt_action::INSTALL:
-                printf("preinstall %s %s:%d\n", i->package, i->filename, i->linenum);
-                DCache->MarkInstall(j, true);
+                if (!cachef[j].InstallVer || cachef[j].Delete()) {
+                    printf("preinstall %s %s:%d\n", i->package, i->filename, i->linenum);
+                    DCache->MarkInstall(j, true);
+                }
                 break;
             case inapt_action::REMOVE:
                 break;
@@ -249,12 +249,16 @@ int main(int argc, char *argv[]) {
         pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)i->obj;
         switch (i->action) {
             case inapt_action::INSTALL:
-                printf("install %s %s:%d\n", i->package, i->filename, i->linenum);
-                DCache->MarkInstall(j, false);
+                if (!cachef[j].InstallVer || cachef[j].Delete()) {
+                    printf("install %s %s:%d\n", i->package, i->filename, i->linenum);
+                    DCache->MarkInstall(j, false);
+                }
                 break;
             case inapt_action::REMOVE:
-                printf("remove %s %s:%d\n", i->package, i->filename, i->linenum);
-                DCache->MarkDelete(j, false);
+                if (cachef[j].InstallVer || cachef[j].Delete()) {
+                    printf("remove %s %s:%d\n", i->package, i->filename, i->linenum);
+                    DCache->MarkDelete(j, false);
+                }
                 break;
             default:
                 fatal("uninitialized action");
