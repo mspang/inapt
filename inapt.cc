@@ -193,6 +193,12 @@ int main(int argc, char *argv[]) {
     scanner(&actions);
 
     for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
+        pkgCache::PkgIterator pkg = cache->FindPkg(i->package);
+        if (pkg.end())
+            fatal("%s:%d: No such package: %s", i->filename, i->linenum, i->package);
+    }
+
+    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
         switch(i->action) {
             case inapt_action::INSTALL:
                 DCache->MarkInstall(cache->FindPkg(i->package), true);
