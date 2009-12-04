@@ -193,15 +193,19 @@ int main(int argc, char *argv[]) {
     scanner(&actions);
 
     for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
+        debug("finding %s", i->package);
         pkgCache::PkgIterator pkg = cache->FindPkg(i->package);
         if (pkg.end())
             fatal("%s:%d: No such package: %s", i->filename, i->linenum, i->package);
+        i->obj = &pkg;
     }
 
     for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
-        switch(i->action) {
+        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)i->obj;
+        switch (i->action) {
             case inapt_action::INSTALL:
-                DCache->MarkInstall(cache->FindPkg(i->package), true);
+                printf("preinstall %s %s:%d\n", i->package, i->filename, i->linenum);
+                DCache->MarkInstall(j, true);
                 break;
             case inapt_action::REMOVE:
                 break;
@@ -211,14 +215,15 @@ int main(int argc, char *argv[]) {
     }
 
     for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
-        switch(i->action) {
+        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)i->obj;
+        switch (i->action) {
             case inapt_action::INSTALL:
                 printf("install %s %s:%d\n", i->package, i->filename, i->linenum);
-                DCache->MarkInstall(cache->FindPkg(i->package), false);
+                DCache->MarkInstall(j, false);
                 break;
             case inapt_action::REMOVE:
                 printf("remove %s %s:%d\n", i->package, i->filename, i->linenum);
-                DCache->MarkDelete(cache->FindPkg(i->package), false);
+                DCache->MarkDelete(j, false);
                 break;
             default:
                 fatal("uninitialized action");
