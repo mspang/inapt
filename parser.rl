@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <vector>
 
 #include "inapt.h"
+#include "util.h"
 
 using namespace std;
 
@@ -48,17 +51,27 @@ using namespace std;
 
 #define BUFSIZE 128
 
-void scanner(vector<inapt_action> *actions)
+void parser(const char *filename, vector<inapt_action> *actions)
 {
     static char buf[BUFSIZE];
+    int fd;
     int cs, have = 0;
     int done = 0;
     int curline = 1;
     char *ts = 0, *te = 0;
 
     inapt_action tmp_action;
-    const char *curfile = "stdin";
+    const char *curfile = filename;
     enum inapt_action::action_t curaction = inapt_action::UNSET;
+
+    if (filename) {
+        fd = open(filename, O_RDONLY);
+        if (fd < 0)
+            fatalpe("open: %s", filename);
+    } else {
+        curfile = "stdin";
+        fd = 0;
+    }
 
     %% write init;
 
@@ -71,10 +84,14 @@ void scanner(vector<inapt_action> *actions)
             exit(1);
         }
 
-        len = fread(p, 1, space, stdin);
+        len = read(fd, p, space);
+        if (len < 0) {
+            fprintf(stderr, "IO ERROR\n");
+            exit(1);
+        }
         pe = p + len;
 
-        if (len < space) {
+        if (!len) {
             eof = pe;
             done = 1;
         }

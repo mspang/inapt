@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include <iostream>
 #include <cstdio>
 #include <fstream>
@@ -18,6 +19,12 @@
 #include "acqprogress.h"
 
 using namespace std;
+
+char *prog = NULL;
+
+static struct option opts[] = {
+    { NULL, 0, NULL, '\0' },
+};
 
 bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
                      bool Safety = true)
@@ -170,7 +177,31 @@ bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
    }
 }
 
+static void usage() {
+    fprintf(stderr, "Usage: %s [filename]\n", prog);
+    exit(2);
+}
+
+
 int main(int argc, char *argv[]) {
+    int opt;
+    char *filename = NULL;
+
+    prog = xstrdup(basename(argv[0]));
+    while ((opt = getopt_long(argc, argv, "", opts, NULL)) != -1) {
+        switch (opt) {
+            case '?':
+                usage();
+                break;
+            default:
+                fatal("error parsing arguments");
+        }
+    }
+
+    if (argc - optind == 1)
+        filename = argv[optind++];
+    else if (argc - optind > 0)
+        usage();
 
     vector<inapt_action> actions;
 
@@ -190,7 +221,7 @@ int main(int argc, char *argv[]) {
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
 
-    scanner(&actions);
+    parser(filename, &actions);
 
     for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
         debug("finding %s", i->package);

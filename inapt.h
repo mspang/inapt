@@ -8,4 +8,4 @@ struct inapt_action {
     void *obj;
 };
 
-void scanner(std::vector<inapt_action> *actions);
+void parser(const char *filename, std::vector<inapt_action> *actions);
