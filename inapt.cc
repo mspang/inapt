@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
     else if (argc - optind > 0)
         usage();
 
-    vector<inapt_action> actions;
+    inapt_context context;
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
@@ -220,21 +220,21 @@ int main(int argc, char *argv[]) {
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
 
-    parser(filename, &actions);
+    parser(filename, &context);
 
-    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
-        pkgCache::PkgIterator pkg = cache->FindPkg(i->package);
+    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++) {
+        pkgCache::PkgIterator pkg = cache->FindPkg((*i)->package);
         if (pkg.end())
-            fatal("%s:%d: No such package: %s", i->filename, i->linenum, i->package);
-        i->obj = &pkg;
+            fatal("%s:%d: No such package: %s", (*i)->filename, (*i)->linenum, (*i)->package);
+        (*i)->obj = &pkg;
     }
 
-    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
-        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)i->obj;
-        switch (i->action) {
+    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++) {
+        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
+        switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if (!cachef[j].InstallVer || cachef[j].Delete()) {
-                    printf("preinstall %s %s:%d\n", i->package, i->filename, i->linenum);
+                    printf("preinstall %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, true);
                 }
                 break;
@@ -245,18 +245,20 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++) {
-        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)i->obj;
-        switch (i->action) {
+    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++) {
+        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
+        switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if (!cachef[j].InstallVer || cachef[j].Delete()) {
-                    printf("install %s %s:%d\n", i->package, i->filename, i->linenum);
+                    printf("install %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, false);
+                } else {
+                    printf("install %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                 }
                 break;
             case inapt_action::REMOVE:
                 if (cachef[j].InstallVer || cachef[j].Delete()) {
-                    printf("remove %s %s:%d\n", i->package, i->filename, i->linenum);
+                    printf("remove %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkDelete(j, false);
                 }
                 break;
@@ -292,10 +294,10 @@ int main(int argc, char *argv[]) {
 
     pkgProblemResolver fix (DCache);
 
-    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++)
-	    fix.Protect(cache->FindPkg(i->package));
-    for (vector<inapt_action>::iterator i = actions.begin(); i < actions.end(); i++)
-	    fix.Protect(cache->FindPkg(i->package));
+    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++)
+	    fix.Protect(cache->FindPkg((*i)->package));
+    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++)
+	    fix.Protect(cache->FindPkg((*i)->package));
     fix.Resolve();
 
     fprintf(stderr, "\n");

@@ -14,7 +14,7 @@ parser.cc: parser.rl
 	ragel parser.rl -o parser.cc
 
 parser.dot: parser.rl
-	ragel -V parser.rl -o parser.dot
+	ragel -pV parser.rl -o parser.dot
 
 parser.png: parser.dot
 	dot -Tpng -o parser.png parser.dot

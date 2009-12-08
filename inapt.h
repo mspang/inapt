@@ -8,4 +8,10 @@ struct inapt_action {
     void *obj;
 };
 
-void parser(const char *filename, std::vector<inapt_action> *actions);
+struct inapt_context {
+    const char *condition;
+    std::vector<inapt_action *> actions;
+    std::vector<inapt_context *> children;
+};
+
+void parser(const char *filename, inapt_context *context);
