@@ -51,7 +51,7 @@ using namespace std;
     }
 
     newline = '\n' %newline;
-    comment = '#' (any - newline)* newline;
+    comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >pkgstart;
     package_list = ((whitespace+ package_name)+ %add_list whitespace*);
@@ -60,9 +60,9 @@ using namespace std;
     simple_cmd = cmd_install | cmd_remove;
     block = '{' @start_block;
     cmd_if = 'if' whitespace+ alpha+ whitespace* block whitespace* ('else' whitespace* block)?;
-    cmd_list = (simple_cmd | cmd_if)* $err(misc_error);
-    block_machine := cmd_list '}' @end_block;
-    main := cmd_list;
+    cmd_list = (simple_cmd | cmd_if)*;
+    block_machine := (cmd_list '}' @end_block) $err(misc_error);
+    main := cmd_list $err(misc_error);
 }%%
 
 %% write data;
