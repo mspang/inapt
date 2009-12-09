@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define xstrndup strndup
+#define MAXDEPTH 3
 
 %%{
     machine inapt;
@@ -39,15 +39,23 @@ using namespace std;
     }
 
     action misc_error {
-        fprintf(stderr, "%s: %d: Syntax Error\n", curfile, curline);
+        fatal("%s: %d: Syntax Error\n", curfile, curline);
     }
 
     action start_block {
-        fcall block_machine;
+        if (depth++ < MAXDEPTH) {
+            fcall main;
+        } else {
+            fatal("%s: %d: Syntax Error: Nesting Too Deep at '}'", curfile, curline);
+        }
     }
 
     action end_block {
-        fret;
+        if (depth--) {
+            fret;
+        } else {
+            fatal("%s: %d: Syntax Error: Unexpected '}'", curfile, curline);
+        }
     }
 
     newline = '\n' %newline;
@@ -58,10 +66,10 @@ using namespace std;
     cmd_install = ('install' @install package_list ';');
     cmd_remove = ('remove' @remove package_list ';');
     simple_cmd = cmd_install | cmd_remove;
-    block = '{' @start_block;
-    cmd_if = 'if' whitespace+ alpha+ whitespace* block whitespace* ('else' whitespace* block)?;
-    cmd_list = (simple_cmd | cmd_if)*;
-    block_machine := (cmd_list '}' @end_block) $err(misc_error);
+    start_block = '{' @start_block;
+    end_block = '}' @end_block;
+    cmd_if = 'if' whitespace+ alpha+ whitespace* start_block whitespace* ('else' whitespace* start_block)?;
+    cmd_list = (simple_cmd | cmd_if | whitespace)* end_block?;
     main := cmd_list $err(misc_error);
 }%%
 
@@ -78,8 +86,9 @@ void parser(const char *filename, inapt_context *top_context)
     int curline = 1;
     char *ts = 0, *te = 0;
     inapt_context *cur_context = top_context;
-    int stack[100];
+    int stack[MAXDEPTH];
     int top = 0; /* TODO: resize */
+    int depth = 0;
 
     const char *curfile = filename;
     enum inapt_action::action_t curaction = inapt_action::UNSET;

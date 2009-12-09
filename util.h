@@ -64,4 +64,13 @@ static inline char *xstrdup(const char *s) {
     return dup;
 }
 
+static inline char *xstrndup(const char *s, size_t n) {
+    char *dup = strndup(s, n);
+
+    if (dup == NULL)
+        fatal("out of memory");
+
+    return dup;
+}
+
 #endif
