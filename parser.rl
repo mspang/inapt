@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <vector>
 
 #include "inapt.h"
@@ -38,10 +39,6 @@ using namespace std;
         curline += 1;
     }
 
-    action misc_error {
-        fatal("%s: %d: Syntax Error\n", curfile, curline);
-    }
-
     action start_block {
         if (depth++ < MAXDEPTH) {
             fcall main;
@@ -58,7 +55,7 @@ using namespace std;
         }
     }
 
-    newline = '\n' %newline;
+    newline = '\n' @newline;
     comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >pkgstart;
@@ -70,12 +67,28 @@ using namespace std;
     end_block = '}' @end_block;
     cmd_if = 'if' whitespace+ alpha+ whitespace* start_block whitespace* ('else' whitespace* start_block)?;
     cmd_list = (simple_cmd | cmd_if | whitespace)* end_block?;
-    main := cmd_list $err(misc_error);
+    main := cmd_list;
 }%%
 
 %% write data;
 
 #define BUFSIZE 128
+
+void badsyntax(const char *filename, int lineno, char badchar, const char *message) {
+    if (!message) {
+        if (badchar == '\n')
+            message = "Unexpected newline";
+        else if (isspace(badchar))
+            message = "Unexpected whitespace";
+        else
+            message = "Syntax error";
+    }
+
+    if (isprint(badchar) && !isspace(badchar))
+        fatal("%s: %d: %s at '%c'", filename, lineno, message, badchar);
+    else
+        fatal("%s: %d: %s", filename, lineno, message);
+}
 
 void parser(const char *filename, inapt_context *top_context)
 {
@@ -127,10 +140,8 @@ void parser(const char *filename, inapt_context *top_context)
 
         %% write exec;
 
-        if (cs == inapt_error) {
-            fprintf(stderr, "PARSE ERROR\n");
-	    exit(1);
-        }
+        if (cs == inapt_error)
+            badsyntax(curfile, curline, *p, NULL);
 
         have = 0;
 
@@ -146,4 +157,7 @@ void parser(const char *filename, inapt_context *top_context)
        fprintf(stderr, "UNEXPECTED EOF\n");
        exit(1);
     }
+
+    if (depth)
+        badsyntax(curfile, curline, 0, "Unclosed block at EOF");
 }
