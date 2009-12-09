@@ -3,7 +3,7 @@ LDFLAGS  := -Wl,--as-needed
 INCLUDES := $(shell krb5-config --cflags)
 override CFLAGS  += -std=gnu99 $(INCLUDES)
 
-all: inapt parser.png
+all: inapt
 
 inapt: inapt.o parser.o acqprogress.o util.o
 	g++ -o inapt -g3 -Wall -Werror -lapt-pkg -lapt-inst $^
