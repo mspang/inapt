@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define MAXDEPTH 3
+#define MAXDEPTH 100
 
 %%{
     machine inapt;
