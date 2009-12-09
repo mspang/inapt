@@ -42,6 +42,14 @@ using namespace std;
         fprintf(stderr, "%s: %d: Syntax Error\n", curfile, curline);
     }
 
+    action start_block {
+        fcall block_machine;
+    }
+
+    action end_block {
+        fret;
+    }
+
     newline = '\n' %newline;
     comment = '#' (any - newline)* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
@@ -49,13 +57,12 @@ using namespace std;
     package_list = ((whitespace+ package_name)+ %add_list whitespace*);
     cmd_install = ('install' @install package_list ';');
     cmd_remove = ('remove' @remove package_list ';');
-    simple_cmd = cmd_install | cmd_remove; # | '{' @{ fcall block; };
-#    cmd_if = 'if' whitespace+ alpha+ whitespace+ simple_cmd whitespace* ('else' whitespace+ simple_cmd)?;
-    cmd_if = 'if' whitespace+ alpha+ whitespace* '{' @{ fcall block; } whitespace* ('else' whitespace* '{' @{ fcall block; })?;
-    statement = simple_cmd | cmd_if;
-    cmd_list = (statement | whitespace)* $err(misc_error);
+    simple_cmd = cmd_install | cmd_remove;
+    block = '{' @start_block;
+    cmd_if = 'if' whitespace+ alpha+ whitespace* block whitespace* ('else' whitespace* block)?;
+    cmd_list = (simple_cmd | cmd_if)* $err(misc_error);
+    block_machine := cmd_list '}' @end_block;
     main := cmd_list;
-    block := cmd_list '}' @{ fret; };
 }%%
 
 %% write data;
