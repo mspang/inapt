@@ -49,11 +49,13 @@ using namespace std;
     package_list = ((whitespace+ package_name)+ %add_list whitespace*);
     cmd_install = ('install' @install package_list ';');
     cmd_remove = ('remove' @remove package_list ';');
-    simple_cmd = cmd_install | cmd_remove;
-    cmd_if = 'if' whitespace+ alpha+ whitespace+ simple_cmd whitespace* ('else' whitespace+ simple_cmd)?;
+    simple_cmd = cmd_install | cmd_remove; # | '{' @{ fcall block; };
+#    cmd_if = 'if' whitespace+ alpha+ whitespace+ simple_cmd whitespace* ('else' whitespace+ simple_cmd)?;
+    cmd_if = 'if' whitespace+ alpha+ whitespace* '{' @{ fcall block; } whitespace* ('else' whitespace* '{' @{ fcall block; })?;
     statement = simple_cmd | cmd_if;
-    cmd_list = (statement | whitespace)* ; #$err(misc_error);
+    cmd_list = (statement | whitespace)* $err(misc_error);
     main := cmd_list;
+    block := cmd_list '}' @{ fret; };
 }%%
 
 %% write data;
@@ -69,8 +71,8 @@ void parser(const char *filename, inapt_context *top_context)
     int curline = 1;
     char *ts = 0, *te = 0;
     inapt_context *cur_context = top_context;
-    //int stack[100];
-    //int top = 0; /* TODO: resize */
+    int stack[100];
+    int top = 0; /* TODO: resize */
 
     const char *curfile = filename;
     enum inapt_action::action_t curaction = inapt_action::UNSET;
