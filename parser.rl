@@ -24,7 +24,7 @@ using namespace std;
         tmp_action->action = curaction;
         tmp_action->linenum = curline;
         tmp_action->filename = curfile;
-        cur_context->actions.push_back(tmp_action);
+        block_stack.back()->actions.push_back(tmp_action);
     }
 
     action install {
@@ -41,6 +41,8 @@ using namespace std;
 
     action start_block {
         if (depth++ < MAXDEPTH) {
+            inapt_block *tmp_block = new inapt_block;
+            block_stack.push_back(tmp_block);
             fcall main;
         } else {
             fatal("%s: %d: Syntax Error: Nesting Too Deep at '}'", curfile, curline);
@@ -55,6 +57,26 @@ using namespace std;
         }
     }
 
+    action start_conditional {
+        inapt_conditional *cond = new inapt_conditional;
+        cond->condition = xstrndup(ts, p - ts);
+        conditional_stack.push_back(cond);
+    }
+
+    action full_conditional {
+        inapt_conditional *cond = conditional_stack.back(); conditional_stack.pop_back();
+        cond->else_block = block_stack.back(); block_stack.pop_back();
+        cond->then_block = block_stack.back(); block_stack.pop_back();
+        block_stack.back()->children.push_back(cond);
+    }
+
+    action half_conditional {
+        inapt_conditional *cond = conditional_stack.back(); conditional_stack.pop_back();
+        cond->else_block = NULL;
+        cond->then_block = block_stack.back(); block_stack.pop_back();
+        block_stack.back()->children.push_back(cond);
+    }
+
     newline = '\n' @newline;
     comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
@@ -65,7 +87,8 @@ using namespace std;
     simple_cmd = cmd_install | cmd_remove;
     start_block = '{' @start_block;
     end_block = '}' @end_block;
-    cmd_if = 'if' whitespace+ alpha+ whitespace* start_block whitespace* ('else' whitespace* start_block)?;
+    cmd_if = 'if' whitespace+ alpha+ >pkgstart %start_conditional whitespace* start_block whitespace*
+             ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
     cmd_list = (simple_cmd | cmd_if | whitespace)* end_block?;
     main := cmd_list;
 }%%
@@ -90,7 +113,7 @@ void badsyntax(const char *filename, int lineno, char badchar, const char *messa
         fatal("%s: %d: %s", filename, lineno, message);
 }
 
-void parser(const char *filename, inapt_context *top_context)
+void parser(const char *filename, inapt_block *top_block)
 {
     static char buf[BUFSIZE];
     int fd;
@@ -98,7 +121,11 @@ void parser(const char *filename, inapt_context *top_context)
     int done = 0;
     int curline = 1;
     char *ts = 0, *te = 0;
-    inapt_context *cur_context = top_context;
+
+    std::vector<inapt_block *> block_stack;
+    std::vector<inapt_conditional *> conditional_stack;
+    block_stack.push_back(top_block);
+
     int stack[MAXDEPTH];
     int top = 0; /* TODO: resize */
     int depth = 0;

@@ -182,6 +182,18 @@ static void usage() {
     exit(2);
 }
 
+static void eval_block(inapt_block *block, std::vector<inapt_action *> *final_actions) {
+    for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++)
+        final_actions->push_back(*i);
+
+    for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
+        if (strcmp((*i)->condition, "false"))
+            eval_block((*i)->then_block, final_actions);
+        else
+            eval_block((*i)->else_block, final_actions);
+    }
+}
+
 int main(int argc, char *argv[]) {
     int opt;
     char *filename = NULL;
@@ -202,7 +214,7 @@ int main(int argc, char *argv[]) {
     else if (argc - optind > 0)
         usage();
 
-    inapt_context context;
+    inapt_block context;
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
@@ -222,14 +234,17 @@ int main(int argc, char *argv[]) {
 
     parser(filename, &context);
 
-    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++) {
+    vector<inapt_action *> final_actions;
+    eval_block(&context, &final_actions);
+
+    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++) {
         pkgCache::PkgIterator pkg = cache->FindPkg((*i)->package);
         if (pkg.end())
             fatal("%s:%d: No such package: %s", (*i)->filename, (*i)->linenum, (*i)->package);
         (*i)->obj = &pkg;
     }
 
-    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++) {
+    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++) {
         pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
@@ -245,7 +260,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++) {
+    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++) {
         pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
@@ -294,9 +309,9 @@ int main(int argc, char *argv[]) {
 
     pkgProblemResolver fix (DCache);
 
-    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++)
+    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++)
 	    fix.Protect(cache->FindPkg((*i)->package));
-    for (vector<inapt_action *>::iterator i = context.actions.begin(); i < context.actions.end(); i++)
+    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++)
 	    fix.Protect(cache->FindPkg((*i)->package));
     fix.Resolve();
 
