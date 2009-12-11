@@ -183,15 +183,15 @@ static void usage() {
     exit(2);
 }
 
-static void eval_block(inapt_block *block, std::vector<inapt_action *> *final_actions) {
+static void eval_block(inapt_block *block, set<string> *defines, std::vector<inapt_action *> *final_actions) {
     for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++)
         final_actions->push_back(*i);
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (strcmp((*i)->condition, "false"))
-            eval_block((*i)->then_block, final_actions);
+        if (defines->find((*i)->condition) != defines->end())
+            eval_block((*i)->then_block, defines, final_actions);
         else
-            eval_block((*i)->else_block, final_actions);
+            eval_block((*i)->else_block, defines, final_actions);
     }
 }
 
@@ -339,14 +339,16 @@ int main(int argc, char *argv[]) {
     else if (argc - optind > 0)
         usage();
 
+    fprintf(stderr, "defines: ");
     for (set<string>::iterator i = defines.begin(); i != defines.end(); i++)
-        fprintf(stderr, "D: %s\n", i->c_str());
+        fprintf(stderr, "%s  ", i->c_str());
+    fprintf(stderr, "\n");
 
     inapt_block context;
 
     parser(filename, &context);
 
     vector<inapt_action *> final_actions;
-    eval_block(&context, &final_actions);
+    eval_block(&context, &defines, &final_actions);
     exec_actions(&final_actions);
 }
