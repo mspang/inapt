@@ -12,6 +12,7 @@
 using namespace std;
 
 #define MAXDEPTH 100
+#define BUFSIZE 128
 
 %%{
     machine inapt;
@@ -87,15 +88,14 @@ using namespace std;
     simple_cmd = cmd_install | cmd_remove;
     start_block = '{' @start_block;
     end_block = '}' @end_block;
-    cmd_if = 'if' whitespace+ alpha+ >pkgstart %start_conditional whitespace* start_block whitespace*
+    macro = alpha (alpha | digit | '-' | '+' | '.')+;
+    cmd_if = 'if' whitespace+ macro >pkgstart %start_conditional whitespace* start_block whitespace*
              ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
     cmd_list = (simple_cmd | cmd_if | whitespace)* end_block?;
     main := cmd_list;
 }%%
 
 %% write data;
-
-#define BUFSIZE 128
 
 void badsyntax(const char *filename, int lineno, char badchar, const char *message) {
     if (!message) {

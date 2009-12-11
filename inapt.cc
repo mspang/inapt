@@ -27,7 +27,7 @@ static struct option opts[] = {
     { NULL, 0, NULL, '\0' },
 };
 
-bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
+bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
                      bool Safety = true)
 {
    if (_config->FindB("APT::Get::Purge", false) == true)
@@ -42,7 +42,7 @@ bool InstallPackages(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
 
    if (Cache->BrokenCount() != 0)
    {
-      return _error->Error("Internal error, InstallPackages was called with broken packages!");
+      return _error->Error("Internal error, run_install was called with broken packages!");
    }
 
    if (Cache->DelCount() == 0 && Cache->InstCount() == 0 &&
@@ -311,7 +311,7 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
 
     fprintf(stderr, "\n");
 
-    InstallPackages(cachef);
+    run_install(cachef);
 }
 
 int main(int argc, char *argv[]) {
@@ -348,10 +348,9 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\n");
 
     inapt_block context;
+    vector<inapt_action *> final_actions;
 
     parser(filename, &context);
-
-    vector<inapt_action *> final_actions;
     eval_block(&context, &defines, &final_actions);
     exec_actions(&final_actions);
 }
