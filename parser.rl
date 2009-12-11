@@ -147,16 +147,12 @@ void parser(const char *filename, inapt_block *top_block)
         char *p = buf + have, *pe, *eof = 0;
         int len, space = BUFSIZE - have;
 
-        if (space == 0) {
-            fprintf(stderr, "OUT OF BUFFER SPACE\n");
-            exit(1);
-        }
+        if (!space)
+            badsyntax(curfile, curline, 0, "Overlength token");
 
         len = read(fd, p, space);
-        if (len < 0) {
-            fprintf(stderr, "IO ERROR\n");
-            exit(1);
-        }
+        if (len < 0)
+            fatalpe("Unable to read spec");
         pe = p + len;
 
         if (!len) {
@@ -178,10 +174,8 @@ void parser(const char *filename, inapt_block *top_block)
         }
     }
 
-    if (cs < inapt_first_final) {
-       fprintf(stderr, "UNEXPECTED EOF\n");
-       exit(1);
-    }
+    if (cs < inapt_first_final)
+        badsyntax(curfile, curline, 0, "Unexpected EOF");
 
     if (top)
         badsyntax(curfile, curline, 0, "Unclosed block at EOF");
