@@ -120,7 +120,7 @@ void parser(const char *filename, inapt_block *top_block)
     int cs, have = 0;
     int done = 0;
     int curline = 1;
-    char *ts = 0, *te = 0;
+    char *ts = 0;
 
     std::vector<inapt_block *> block_stack;
     std::vector<inapt_conditional *> conditional_stack;
@@ -143,7 +143,7 @@ void parser(const char *filename, inapt_block *top_block)
 
     %% write init;
 
-    while ( !done ) {
+    while (!done) {
         char *p = buf + have, *pe, *eof = 0;
         int len, space = BUFSIZE - have;
 
@@ -174,7 +174,6 @@ void parser(const char *filename, inapt_block *top_block)
         if (ts) {
             have = pe - ts;
             memmove(buf, ts, have);
-            te = buf + (te - ts);
             ts = buf;
         }
     }
