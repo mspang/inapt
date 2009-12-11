@@ -40,7 +40,7 @@ using namespace std;
     }
 
     action start_block {
-        if (depth++ < MAXDEPTH) {
+        if (top < MAXDEPTH) {
             inapt_block *tmp_block = new inapt_block;
             block_stack.push_back(tmp_block);
             fcall main;
@@ -50,7 +50,7 @@ using namespace std;
     }
 
     action end_block {
-        if (depth--) {
+        if (top) {
             fret;
         } else {
             fatal("%s: %d: Syntax Error: Unexpected '}'", curfile, curline);
@@ -127,8 +127,7 @@ void parser(const char *filename, inapt_block *top_block)
     block_stack.push_back(top_block);
 
     int stack[MAXDEPTH];
-    int top = 0; /* TODO: resize */
-    int depth = 0;
+    int top = 0;
 
     const char *curfile = filename;
     enum inapt_action::action_t curaction = inapt_action::UNSET;
@@ -185,6 +184,6 @@ void parser(const char *filename, inapt_block *top_block)
        exit(1);
     }
 
-    if (depth)
+    if (top)
         badsyntax(curfile, curline, 0, "Unclosed block at EOF");
 }

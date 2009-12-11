@@ -184,6 +184,9 @@ static void usage() {
 }
 
 static void eval_block(inapt_block *block, set<string> *defines, std::vector<inapt_action *> *final_actions) {
+    if (!block)
+        return;
+
     for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++)
         final_actions->push_back(*i);
 
