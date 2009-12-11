@@ -195,38 +195,7 @@ static void eval_block(inapt_block *block, std::vector<inapt_action *> *final_ac
     }
 }
 
-int main(int argc, char *argv[]) {
-    int opt;
-    char *filename = NULL;
-
-    set<string> defines;
-
-    prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "D:U:", opts, NULL)) != -1) {
-        switch (opt) {
-            case 'D':
-                defines.insert(optarg);
-                break;
-            case 'U':
-                defines.erase(optarg);
-                break;
-            case '?':
-                usage();
-                break;
-            default:
-                fatal("error parsing arguments");
-        }
-    }
-
-    if (argc - optind == 1)
-        filename = argv[optind++];
-    else if (argc - optind > 0)
-        usage();
-
-    for (set<string>::iterator i = defines.begin(); i != defines.end(); i++)
-        fprintf(stderr, "D: %s\n", i->c_str());
-
-    inapt_block context;
+static void exec_actions(std::vector<inapt_action *> *final_actions) {
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
@@ -244,19 +213,14 @@ int main(int argc, char *argv[]) {
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
 
-    parser(filename, &context);
-
-    vector<inapt_action *> final_actions;
-    eval_block(&context, &final_actions);
-
-    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++) {
+    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator pkg = cache->FindPkg((*i)->package);
         if (pkg.end())
             fatal("%s:%d: No such package: %s", (*i)->filename, (*i)->linenum, (*i)->package);
         (*i)->obj = &pkg;
     }
 
-    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++) {
+    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
@@ -272,7 +236,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++) {
+    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
@@ -321,9 +285,9 @@ int main(int argc, char *argv[]) {
 
     pkgProblemResolver fix (DCache);
 
-    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++)
+    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
 	    fix.Protect(cache->FindPkg((*i)->package));
-    for (vector<inapt_action *>::iterator i = final_actions.begin(); i < final_actions.end(); i++)
+    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
 	    fix.Protect(cache->FindPkg((*i)->package));
     fix.Resolve();
 
@@ -345,4 +309,44 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\n");
 
     InstallPackages(cachef);
+}
+
+int main(int argc, char *argv[]) {
+    int opt;
+    char *filename = NULL;
+
+    set<string> defines;
+
+    prog = xstrdup(basename(argv[0]));
+    while ((opt = getopt_long(argc, argv, "D:U:", opts, NULL)) != -1) {
+        switch (opt) {
+            case 'D':
+                defines.insert(optarg);
+                break;
+            case 'U':
+                defines.erase(optarg);
+                break;
+            case '?':
+                usage();
+                break;
+            default:
+                fatal("error parsing arguments");
+        }
+    }
+
+    if (argc - optind == 1)
+        filename = argv[optind++];
+    else if (argc - optind > 0)
+        usage();
+
+    for (set<string>::iterator i = defines.begin(); i != defines.end(); i++)
+        fprintf(stderr, "D: %s\n", i->c_str());
+
+    inapt_block context;
+
+    parser(filename, &context);
+
+    vector<inapt_action *> final_actions;
+    eval_block(&context, &final_actions);
+    exec_actions(&final_actions);
 }
