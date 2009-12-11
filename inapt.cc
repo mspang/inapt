@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdio>
 #include <fstream>
+#include <set>
 #include <apt-pkg/pkgcache.h>
 #include <apt-pkg/cachefile.h>
 #include <apt-pkg/dpkgdb.h>
@@ -198,9 +199,17 @@ int main(int argc, char *argv[]) {
     int opt;
     char *filename = NULL;
 
+    set<string> defines;
+
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "D:U:", opts, NULL)) != -1) {
         switch (opt) {
+            case 'D':
+                defines.insert(optarg);
+                break;
+            case 'U':
+                defines.erase(optarg);
+                break;
             case '?':
                 usage();
                 break;
@@ -213,6 +222,9 @@ int main(int argc, char *argv[]) {
         filename = argv[optind++];
     else if (argc - optind > 0)
         usage();
+
+    for (set<string>::iterator i = defines.begin(); i != defines.end(); i++)
+        fprintf(stderr, "D: %s\n", i->c_str());
 
     inapt_block context;
 
