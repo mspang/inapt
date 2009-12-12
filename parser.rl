@@ -21,7 +21,7 @@ using namespace std;
 
     action add_list {
         inapt_action *tmp_action = new inapt_action;
-        tmp_action->package = xstrndup(ts, p - ts);
+        tmp_action->package = xstrndup(ts, p - ts); ts = 0;
         tmp_action->action = curaction;
         tmp_action->linenum = curline;
         tmp_action->filename = curfile;
@@ -60,7 +60,7 @@ using namespace std;
 
     action start_conditional {
         inapt_conditional *cond = new inapt_conditional;
-        cond->condition = xstrndup(ts, p - ts);
+        cond->condition = xstrndup(ts, p - ts); ts = 0;
         conditional_stack.push_back(cond);
     }
 

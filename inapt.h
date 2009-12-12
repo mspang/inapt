@@ -1,4 +1,5 @@
 #include <vector>
+#include <apt-pkg/pkgcache.h>
 
 struct inapt_conditional;
 
@@ -7,7 +8,7 @@ struct inapt_action {
     enum action_t { INSTALL, REMOVE, UNSET } action;
     const char *filename;
     int linenum;
-    void *obj;
+    pkgCache::PkgIterator pkg;
 };
 
 struct inapt_block {

@@ -220,14 +220,31 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
         pkgCache::PkgIterator pkg = cache->FindPkg((*i)->package);
         if (pkg.end())
             fatal("%s:%d: No such package: %s", (*i)->filename, (*i)->linenum, (*i)->package);
-        (*i)->obj = &pkg;
+        (*i)->pkg = pkg;
+        if (!cachef[pkg].CandidateVer) {
+            if (pkg->ProvidesList) {
+                if (!pkg.ProvidesList()->NextProvides) {
+                    pkgCache::PkgIterator tmp = pkg.ProvidesList().OwnerPkg();
+                    if ((*i)->action == inapt_action::INSTALL) {
+                        debug("selecting %s instead of %s", tmp.Name(), pkg.Name());
+                        (*i)->pkg = tmp;
+                    } else {
+                        debug("will not remove %s instead of virtual package %s", tmp.Name(), pkg.Name());
+                    }
+                } else {
+                    fatal("%s is a virtual package", pkg.Name());
+                }
+            } else {
+                fatal("%s is a virtual packages with no provides", pkg.Name());
+            }
+        }
     }
 
     for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
-        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
+        pkgCache::PkgIterator j = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
-                if (!cachef[j].InstallVer || cachef[j].Delete()) {
+                if (!j.CurVersion() || cachef[j].Delete()) {
                     printf("preinstall %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, true);
                 }
@@ -240,20 +257,22 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
     }
 
     for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
-        pkgCache::PkgIterator j = *(pkgCache::PkgIterator *)(*i)->obj;
+        pkgCache::PkgIterator j = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
-                if (!cachef[j].InstallVer || cachef[j].Delete()) {
+                if (!j.CurVersion() || cachef[j].Delete()) {
                     printf("install %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, false);
                 } else {
-                    printf("install %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
+                    //printf("install %s %s:%d NTD\n", (*i)->package, (*i)->filename, (*i)->linenum);
                 }
                 break;
             case inapt_action::REMOVE:
-                if (cachef[j].InstallVer || cachef[j].Delete()) {
-                    printf("remove %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
+                if (j.CurVersion() || cachef[j].Install()) {
+                    printf("remove %s %s:%d %s\n", (*i)->package, (*i)->filename, (*i)->linenum, j.CurVersion());
                     DCache->MarkDelete(j, false);
+                } else {
+                    //printf("remove %s %s:%d NTD\n", (*i)->package, (*i)->filename, (*i)->linenum);
                 }
                 break;
             default:
