@@ -9,6 +9,7 @@ struct inapt_action {
     const char *filename;
     int linenum;
     pkgCache::PkgIterator pkg;
+    std::vector<const char *> predicates;
 };
 
 struct inapt_block {

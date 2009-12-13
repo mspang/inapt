@@ -17,7 +17,7 @@ using namespace std;
 %%{
     machine inapt;
 
-    action pkgstart { ts = p; }
+    action strstart { ts = p; }
 
     action add_list {
         inapt_action *tmp_action = new inapt_action;
@@ -25,6 +25,12 @@ using namespace std;
         tmp_action->action = curaction;
         tmp_action->linenum = curline;
         tmp_action->filename = curfile;
+        if (cmd_predicate)
+            tmp_action->predicates.push_back(cmd_predicate);
+        if (pkg_predicate) {
+            tmp_action->predicates.push_back(pkg_predicate);
+            pkg_predicate = NULL;
+        }
         block_stack.back()->actions.push_back(tmp_action);
     }
 
@@ -78,19 +84,38 @@ using namespace std;
         block_stack.back()->children.push_back(cond);
     }
 
+    action pkg_predicate {
+        if (pkg_predicate)
+            fatal("pkg_predicate already set");
+        pkg_predicate = xstrndup(ts, p - ts); ts = 0;
+    }
+
+    action cmd_predicate {
+        if (cmd_predicate)
+            fatal("cmd_predicate already set");
+        cmd_predicate = xstrndup(ts, p - ts); ts = 0;
+    }
+
+    action clear_cmd_predicate {
+        cmd_predicate = NULL;
+    }
+
     newline = '\n' @newline;
     comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
-    package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >pkgstart;
-    package_list = ((whitespace+ package_name)+ %add_list whitespace*);
-    cmd_install = ('install' @install package_list ';');
-    cmd_remove = ('remove' @remove package_list ';');
+    macro = alpha (alpha | digit | '-' | '+' | '.')*;
+    package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >strstart;
+    pkg_predicate = '@' macro >strstart %pkg_predicate whitespace+;
+    cmd_predicate = '@' macro >strstart %cmd_predicate whitespace+;
+    package_list = ((whitespace+ pkg_predicate? package_name)+ %add_list whitespace*);
+    cmd_install = ('install' @install package_list ';' @clear_cmd_predicate);
+    cmd_remove = ('remove' @remove package_list ';' @clear_cmd_predicate);
     start_block = '{' @start_block;
     end_block = '}' @end_block;
-    macro = alpha (alpha | digit | '-' | '+' | '.')*;
-    cmd_if = 'if' whitespace+ macro >pkgstart %start_conditional whitespace* start_block whitespace*
+    cmd_if = 'if' whitespace+ macro >strstart %start_conditional whitespace* start_block whitespace*
              ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
-    cmd_list = (cmd_install | cmd_remove | cmd_if | whitespace)* end_block?;
+    cmd = whitespace* (cmd_predicate? (cmd_install | cmd_remove) | cmd_if);
+    cmd_list = cmd* whitespace* end_block?;
     main := cmd_list;
 }%%
 
@@ -120,6 +145,7 @@ void parser(const char *filename, inapt_block *top_block)
     int done = 0;
     int curline = 1;
     char *ts = 0;
+    char *cmd_predicate = NULL, *pkg_predicate = NULL;
 
     std::vector<inapt_block *> block_stack;
     std::vector<inapt_conditional *> conditional_stack;

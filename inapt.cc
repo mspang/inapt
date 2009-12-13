@@ -187,8 +187,17 @@ static void eval_block(inapt_block *block, set<string> *defines, std::vector<ina
     if (!block)
         return;
 
-    for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++)
-        final_actions->push_back(*i);
+    for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++) {
+        bool ok = true;
+        for (vector<const char *>::iterator j = (*i)->predicates.begin(); j < (*i)->predicates.end(); j++) {
+            if (defines->find(*j) == defines->end()) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok)
+            final_actions->push_back(*i);
+    }
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
         if (defines->find((*i)->condition) != defines->end())
@@ -263,16 +272,12 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
                 if ((!j.CurrentVer() && !cachef[j].Install()) || cachef[j].Delete()) {
                     printf("install %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, false);
-                } else {
-                    //printf("install %s %s:%d NTD\n", (*i)->package, (*i)->filename, (*i)->linenum);
                 }
                 break;
             case inapt_action::REMOVE:
                 if ((j.CurrentVer() && !cachef[j].Delete()) || cachef[j].Install()) {
                     printf("remove %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkDelete(j, false);
-                } else {
-                    //printf("remove %s %s:%d NTD\n", (*i)->package, (*i)->filename, (*i)->linenum);
                 }
                 break;
             default:
