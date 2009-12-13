@@ -88,7 +88,7 @@ using namespace std;
     simple_cmd = cmd_install | cmd_remove;
     start_block = '{' @start_block;
     end_block = '}' @end_block;
-    macro = alpha (alpha | digit | '-' | '+' | '.')+;
+    macro = alpha (alpha | digit | '-' | '+' | '.')*;
     cmd_if = 'if' whitespace+ macro >pkgstart %start_conditional whitespace* start_block whitespace*
              ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
     cmd_list = (simple_cmd | cmd_if | whitespace)* end_block?;
