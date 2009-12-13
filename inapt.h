@@ -19,9 +19,15 @@ struct inapt_package {
     int linenum;
 };
 
+struct inapt_profiles {
+    std::vector<std::string> predicates;
+    std::vector<std::string> profiles;
+};
+
 struct inapt_block {
     std::vector<inapt_action *> actions;
     std::vector<inapt_conditional *> children;
+    std::vector<inapt_profiles *> profiles;
 };
 
 struct inapt_conditional {

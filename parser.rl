@@ -48,6 +48,13 @@ using namespace std;
         block_stack.back()->actions.push_back(tmp_action);
     }
 
+    action add_profiles {
+        inapt_profiles *tmp_profiles = new inapt_profiles;
+        tmp_profiles->profiles.swap(profiles);
+        tmp_profiles->predicates.swap(cmd_predicates);
+        block_stack.back()->profiles.push_back(tmp_profiles);
+    }
+
     action newline {
         curline += 1;
     }
@@ -100,22 +107,29 @@ using namespace std;
         cmd_predicates.push_back(tmp);
     }
 
+    action profile {
+        std::string tmp (ts, p - ts); ts = 0;
+        profiles.push_back(tmp);
+    }
+
     newline = '\n' @newline;
     comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
-    profile = '!'? alpha (alpha | digit | '-' | '+' | '.')*;
+    profile = alpha (alpha | digit | '-' | '+' | '.')*;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >strstart;
-    pkg_predicate = '@' profile >strstart %pkg_predicate whitespace+;
-    cmd_predicate = '@' profile >strstart %cmd_predicate whitespace+;
+    pkg_predicate = '@' ('!'? profile) >strstart %pkg_predicate whitespace+;
+    cmd_predicate = '@' ('!'? profile) >strstart %cmd_predicate whitespace+;
     package_alternates = package_name >strstart %add_alternate ('/' package_name >strstart %add_alternate)*;
     package_list = ((whitespace+ pkg_predicate? package_alternates)+ %add_package whitespace*);
+    profile_list = (whitespace+ profile >strstart %profile)* whitespace*;
     cmd_install = ('install' @start_install package_list ';');
     cmd_remove = ('remove' @start_remove package_list ';');
+    cmd_profiles = ('profiles' profile_list ';' @add_profiles);
     start_block = '{' @start_block;
     end_block = '}' @end_block;
     cmd_if = 'if' whitespace+ profile >strstart %start_conditional whitespace* start_block whitespace*
              ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
-    cmd = whitespace* (cmd_predicate? (cmd_install | cmd_remove) | cmd_if);
+    cmd = whitespace* (cmd_predicate? (cmd_install | cmd_remove | cmd_profiles) | cmd_if);
     cmd_list = cmd* whitespace* end_block?;
     main := cmd_list;
 }%%
@@ -152,6 +166,7 @@ void parser(const char *filename, inapt_block *top_block)
     std::vector<std::string> alternates;
     std::vector<std::string> cmd_predicates;
     std::vector<std::string> pkg_predicates;
+    std::vector<std::string> profiles;
     block_stack.push_back(top_block);
     inapt_action *tmp_action = NULL;
 

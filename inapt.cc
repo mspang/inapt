@@ -277,6 +277,23 @@ static void eval_block(inapt_block *block, set<string> *defines, vector<inapt_pa
     }
 }
 
+static void eval_profiles(inapt_block *block, set<string> *defines) {
+    if (!block)
+        return;
+
+    for (vector<inapt_profiles *>::iterator i = block->profiles.begin(); i < block->profiles.end(); i++)
+        if (test_macros(&(*i)->predicates, defines))
+            for (vector<std::string>::iterator j = (*i)->profiles.begin(); j != (*i)->profiles.end(); j++)
+                defines->insert(*j);
+
+    for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
+        if (test_macro((*i)->condition, defines))
+            eval_profiles((*i)->then_block, defines);
+        else
+            eval_profiles((*i)->else_block, defines);
+    }
+}
+
 static void exec_actions(std::vector<inapt_package *> *final_actions) {
 
     pkgInitConfig(*_config);
@@ -410,15 +427,17 @@ int main(int argc, char *argv[]) {
     else if (argc - optind > 0)
         usage();
 
-    fprintf(stderr, "defines: ");
-    for (set<string>::iterator i = defines.begin(); i != defines.end(); i++)
-        fprintf(stderr, "%s  ", i->c_str());
-    fprintf(stderr, "\n");
-
     inapt_block context;
     vector<inapt_package *> final_actions;
 
     parser(filename, &context);
+    eval_profiles(&context, &defines);
+
+    fprintf(stderr, "defines: ");
+    for (set<string>::iterator i = defines.begin(); i != defines.end(); i++)
+        fprintf(stderr, "%s ", i->c_str());
+    fprintf(stderr, "\n");
+
     eval_block(&context, &defines, &final_actions);
     exec_actions(&final_actions);
 }
