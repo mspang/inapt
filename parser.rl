@@ -103,17 +103,17 @@ using namespace std;
     newline = '\n' @newline;
     comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
-    macro = '!'? alpha (alpha | digit | '-' | '+' | '.')*;
+    profile = '!'? alpha (alpha | digit | '-' | '+' | '.')*;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >strstart;
-    pkg_predicate = '@' macro >strstart %pkg_predicate whitespace+;
-    cmd_predicate = '@' macro >strstart %cmd_predicate whitespace+;
+    pkg_predicate = '@' profile >strstart %pkg_predicate whitespace+;
+    cmd_predicate = '@' profile >strstart %cmd_predicate whitespace+;
     package_alternates = package_name >strstart %add_alternate ('/' package_name >strstart %add_alternate)*;
     package_list = ((whitespace+ pkg_predicate? package_alternates)+ %add_package whitespace*);
     cmd_install = ('install' @start_install package_list ';');
     cmd_remove = ('remove' @start_remove package_list ';');
     start_block = '{' @start_block;
     end_block = '}' @end_block;
-    cmd_if = 'if' whitespace+ macro >strstart %start_conditional whitespace* start_block whitespace*
+    cmd_if = 'if' whitespace+ profile >strstart %start_conditional whitespace* start_block whitespace*
              ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
     cmd = whitespace* (cmd_predicate? (cmd_install | cmd_remove) | cmd_if);
     cmd_list = cmd* whitespace* end_block?;
