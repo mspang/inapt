@@ -19,9 +19,14 @@ using namespace std;
 
     action strstart { ts = p; }
 
-    action add_list {
+    action add_alternate {
+        std::string tmp (ts, p - ts); ts = 0;
+        alternates.push_back(tmp);
+    }
+
+    action add_action {
         inapt_action *tmp_action = new inapt_action;
-        tmp_action->package = xstrndup(ts, p - ts); ts = 0;
+        tmp_action->alternates.swap(alternates);
         tmp_action->action = curaction;
         tmp_action->linenum = curline;
         tmp_action->filename = curfile;
@@ -107,7 +112,8 @@ using namespace std;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >strstart;
     pkg_predicate = '@' macro >strstart %pkg_predicate whitespace+;
     cmd_predicate = '@' macro >strstart %cmd_predicate whitespace+;
-    package_list = ((whitespace+ pkg_predicate? package_name)+ %add_list whitespace*);
+    package_alternates = package_name >strstart %add_alternate ('/' package_name >strstart %add_alternate)*;
+    package_list = ((whitespace+ pkg_predicate? package_alternates)+ %add_action whitespace*);
     cmd_install = ('install' @install package_list ';' @clear_cmd_predicate);
     cmd_remove = ('remove' @remove package_list ';' @clear_cmd_predicate);
     start_block = '{' @start_block;
@@ -149,6 +155,7 @@ void parser(const char *filename, inapt_block *top_block)
 
     std::vector<inapt_block *> block_stack;
     std::vector<inapt_conditional *> conditional_stack;
+    std::vector<std::string> alternates;
     block_stack.push_back(top_block);
 
     int stack[MAXDEPTH];

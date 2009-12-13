@@ -188,6 +188,61 @@ static bool test_macro(const char *macro, set<string> *defines) {
             || (*macro == '!' && defines->find(macro + 1) == defines->end());
 }
 
+static pkgCache::PkgIterator eval_pkg(inapt_action *action, pkgCacheFile &cachef) {
+    pkgCache::PkgIterator pkg;
+
+    pkgCache *cache = cachef;
+
+    if (!pkg.end()) fatal("omg"); /* TODO */
+
+    for (std::vector<std::string>::iterator i = action->alternates.begin(); i != action->alternates.end(); i++) {
+        pkg = cache->FindPkg(*i);
+
+        /* no such package */
+        if (pkg.end())
+            continue;
+
+        /* real package */
+        if (cachef[pkg].CandidateVer)
+            break;
+
+        /* virtual package */
+        if (pkg->ProvidesList) {
+            if (!pkg.ProvidesList()->NextProvides) {
+                pkgCache::PkgIterator tmp = pkg.ProvidesList().OwnerPkg();
+                if (action->action == inapt_action::INSTALL) {
+                    debug("selecting %s instead of %s", tmp.Name(), pkg.Name());
+                    pkg = tmp;
+                    break;
+                } else {
+                    debug("will not remove %s instead of virtual package %s", tmp.Name(), pkg.Name());
+                }
+            } else {
+                debug("%s is a virtual package", pkg.Name());
+            }
+        } else {
+            debug("%s is a virtual packages with no provides", pkg.Name());
+        }
+    }
+
+    if (pkg.end()) {
+        /* todo: report all errors at the end */
+        if (action->alternates.size() == 1) {
+            fatal("%s:%d: No such package: %s", action->filename, action->linenum, action->alternates[0].c_str());
+        } else {
+            std::vector<std::string>::iterator i = action->alternates.begin();
+            std::string message = *(i++);
+            while (i != action->alternates.end()) {
+                message.append(", ");
+                message.append(*(i++));
+            }
+            fatal("%s:%d: No alternative available: %s", action->filename, action->linenum, message.c_str());
+        }
+    }
+
+    return pkg;
+}
+
 static void eval_block(inapt_block *block, set<string> *defines, std::vector<inapt_action *> *final_actions) {
     if (!block)
         return;
@@ -230,36 +285,15 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
 
-    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
-        pkgCache::PkgIterator pkg = cache->FindPkg((*i)->package);
-        if (pkg.end())
-            fatal("%s:%d: No such package: %s", (*i)->filename, (*i)->linenum, (*i)->package);
-        (*i)->pkg = pkg;
-        if (!cachef[pkg].CandidateVer) {
-            if (pkg->ProvidesList) {
-                if (!pkg.ProvidesList()->NextProvides) {
-                    pkgCache::PkgIterator tmp = pkg.ProvidesList().OwnerPkg();
-                    if ((*i)->action == inapt_action::INSTALL) {
-                        debug("selecting %s instead of %s", tmp.Name(), pkg.Name());
-                        (*i)->pkg = tmp;
-                    } else {
-                        debug("will not remove %s instead of virtual package %s", tmp.Name(), pkg.Name());
-                    }
-                } else {
-                    fatal("%s is a virtual package", pkg.Name());
-                }
-            } else {
-                fatal("%s is a virtual packages with no provides", pkg.Name());
-            }
-        }
-    }
+    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
+        (*i)->pkg = eval_pkg(*i, cachef);
 
     for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator j = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if (!j.CurrentVer() || cachef[j].Delete()) {
-                    printf("preinstall %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
+                    printf("preinstall %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, true);
                 }
                 break;
@@ -275,13 +309,13 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
         switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if ((!j.CurrentVer() && !cachef[j].Install()) || cachef[j].Delete()) {
-                    printf("install %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
+                    printf("install %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, false);
                 }
                 break;
             case inapt_action::REMOVE:
                 if ((j.CurrentVer() && !cachef[j].Delete()) || cachef[j].Install()) {
-                    printf("remove %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
+                    printf("remove %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
                     DCache->MarkDelete(j, false);
                 }
                 break;
@@ -318,9 +352,7 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
     pkgProblemResolver fix (DCache);
 
     for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
-	    fix.Protect(cache->FindPkg((*i)->package));
-    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
-	    fix.Protect(cache->FindPkg((*i)->package));
+	    fix.Protect((*i)->pkg);
     fix.Resolve();
 
     fprintf(stderr, "\n");

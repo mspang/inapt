@@ -4,7 +4,7 @@
 struct inapt_conditional;
 
 struct inapt_action {
-    const char *package;
+    std::vector<std::string> alternates;
     enum action_t { INSTALL, REMOVE, UNSET } action;
     const char *filename;
     int linenum;
