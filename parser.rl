@@ -27,6 +27,7 @@ using namespace std;
     action add_package {
         inapt_package *tmp_package = new inapt_package;
         tmp_package->alternates.swap(alternates);
+        tmp_package->action = tmp_action->action;
         tmp_package->linenum = curline;
         tmp_package->filename = curfile;
         tmp_package->predicates.swap(pkg_predicates);
