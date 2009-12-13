@@ -183,6 +183,11 @@ static void usage() {
     exit(2);
 }
 
+static bool test_macro(const char *macro, set<string> *defines) {
+    return (*macro != '!' && defines->find(macro) != defines->end())
+            || (*macro == '!' && defines->find(macro + 1) == defines->end());
+}
+
 static void eval_block(inapt_block *block, set<string> *defines, std::vector<inapt_action *> *final_actions) {
     if (!block)
         return;
@@ -190,7 +195,7 @@ static void eval_block(inapt_block *block, set<string> *defines, std::vector<ina
     for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++) {
         bool ok = true;
         for (vector<const char *>::iterator j = (*i)->predicates.begin(); j < (*i)->predicates.end(); j++) {
-            if (defines->find(*j) == defines->end()) {
+            if (!test_macro(*j, defines)) {
                 ok = false;
                 break;
             }
@@ -200,7 +205,7 @@ static void eval_block(inapt_block *block, set<string> *defines, std::vector<ina
     }
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (defines->find((*i)->condition) != defines->end())
+        if (test_macro((*i)->condition, defines))
             eval_block((*i)->then_block, defines, final_actions);
         else
             eval_block((*i)->else_block, defines, final_actions);

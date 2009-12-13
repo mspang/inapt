@@ -103,7 +103,7 @@ using namespace std;
     newline = '\n' @newline;
     comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
-    macro = alpha (alpha | digit | '-' | '+' | '.')*;
+    macro = '!'? alpha (alpha | digit | '-' | '+' | '.')*;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >strstart;
     pkg_predicate = '@' macro >strstart %pkg_predicate whitespace+;
     cmd_predicate = '@' macro >strstart %cmd_predicate whitespace+;
