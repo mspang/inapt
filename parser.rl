@@ -24,27 +24,27 @@ using namespace std;
         alternates.push_back(tmp);
     }
 
-    action add_action {
-        inapt_action *tmp_action = new inapt_action;
-        tmp_action->alternates.swap(alternates);
-        tmp_action->action = curaction;
-        tmp_action->linenum = curline;
-        tmp_action->filename = curfile;
-        if (cmd_predicate)
-            tmp_action->predicates.push_back(cmd_predicate);
-        if (pkg_predicate) {
-            tmp_action->predicates.push_back(pkg_predicate);
-            pkg_predicate = NULL;
-        }
+    action add_package {
+        inapt_package *tmp_package = new inapt_package;
+        tmp_package->alternates.swap(alternates);
+        tmp_package->linenum = curline;
+        tmp_package->filename = curfile;
+        tmp_package->predicates.swap(pkg_predicates);
+        tmp_action->packages.push_back(tmp_package);
+    }
+
+    action start_install {
+        tmp_action = new inapt_action;
+        tmp_action->action = inapt_action::INSTALL;
+        tmp_action->predicates.swap(cmd_predicates);
         block_stack.back()->actions.push_back(tmp_action);
     }
 
-    action install {
-        curaction = inapt_action::INSTALL;
-    }
-
-    action remove {
-        curaction = inapt_action::REMOVE;
+    action start_remove {
+        tmp_action = new inapt_action;
+        tmp_action->action = inapt_action::REMOVE;
+        tmp_action->predicates.swap(cmd_predicates);
+        block_stack.back()->actions.push_back(tmp_action);
     }
 
     action newline {
@@ -90,19 +90,13 @@ using namespace std;
     }
 
     action pkg_predicate {
-        if (pkg_predicate)
-            fatal("pkg_predicate already set");
-        pkg_predicate = xstrndup(ts, p - ts); ts = 0;
+        std::string tmp (ts, p - ts); ts = 0;
+        pkg_predicates.push_back(tmp);
     }
 
     action cmd_predicate {
-        if (cmd_predicate)
-            fatal("cmd_predicate already set");
-        cmd_predicate = xstrndup(ts, p - ts); ts = 0;
-    }
-
-    action clear_cmd_predicate {
-        cmd_predicate = NULL;
+        std::string tmp (ts, p - ts); ts = 0;
+        cmd_predicates.push_back(tmp);
     }
 
     newline = '\n' @newline;
@@ -113,9 +107,9 @@ using namespace std;
     pkg_predicate = '@' macro >strstart %pkg_predicate whitespace+;
     cmd_predicate = '@' macro >strstart %cmd_predicate whitespace+;
     package_alternates = package_name >strstart %add_alternate ('/' package_name >strstart %add_alternate)*;
-    package_list = ((whitespace+ pkg_predicate? package_alternates)+ %add_action whitespace*);
-    cmd_install = ('install' @install package_list ';' @clear_cmd_predicate);
-    cmd_remove = ('remove' @remove package_list ';' @clear_cmd_predicate);
+    package_list = ((whitespace+ pkg_predicate? package_alternates)+ %add_package whitespace*);
+    cmd_install = ('install' @start_install package_list ';');
+    cmd_remove = ('remove' @start_remove package_list ';');
     start_block = '{' @start_block;
     end_block = '}' @end_block;
     cmd_if = 'if' whitespace+ macro >strstart %start_conditional whitespace* start_block whitespace*
@@ -151,18 +145,19 @@ void parser(const char *filename, inapt_block *top_block)
     int done = 0;
     int curline = 1;
     char *ts = 0;
-    char *cmd_predicate = NULL, *pkg_predicate = NULL;
 
     std::vector<inapt_block *> block_stack;
     std::vector<inapt_conditional *> conditional_stack;
     std::vector<std::string> alternates;
+    std::vector<std::string> cmd_predicates;
+    std::vector<std::string> pkg_predicates;
     block_stack.push_back(top_block);
+    inapt_action *tmp_action = NULL;
 
     int stack[MAXDEPTH];
     int top = 0;
 
     const char *curfile = filename;
-    enum inapt_action::action_t curaction = inapt_action::UNSET;
 
     if (filename) {
         fd = open(filename, O_RDONLY);

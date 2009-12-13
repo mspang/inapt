@@ -3,13 +3,18 @@
 
 struct inapt_conditional;
 
-struct inapt_action {
+struct inapt_package {
     std::vector<std::string> alternates;
-    enum action_t { INSTALL, REMOVE, UNSET } action;
+    std::vector<std::string> predicates;
+    pkgCache::PkgIterator pkg;
     const char *filename;
     int linenum;
-    pkgCache::PkgIterator pkg;
-    std::vector<const char *> predicates;
+};
+
+struct inapt_action {
+    enum action_t { INSTALL, REMOVE } action;
+    std::vector<std::string> predicates;
+    std::vector<inapt_package *> packages;
 };
 
 struct inapt_block {

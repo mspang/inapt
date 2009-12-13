@@ -188,14 +188,14 @@ static bool test_macro(const char *macro, set<string> *defines) {
             || (*macro == '!' && defines->find(macro + 1) == defines->end());
 }
 
-static pkgCache::PkgIterator eval_pkg(inapt_action *action, pkgCacheFile &cachef) {
+static pkgCache::PkgIterator eval_pkg(inapt_action *action, inapt_package *package, pkgCacheFile &cachef) {
     pkgCache::PkgIterator pkg;
 
     pkgCache *cache = cachef;
 
     if (!pkg.end()) fatal("omg"); /* TODO */
 
-    for (std::vector<std::string>::iterator i = action->alternates.begin(); i != action->alternates.end(); i++) {
+    for (std::vector<std::string>::iterator i = package->alternates.begin(); i != package->alternates.end(); i++) {
         pkg = cache->FindPkg(*i);
 
         /* no such package */
@@ -227,16 +227,16 @@ static pkgCache::PkgIterator eval_pkg(inapt_action *action, pkgCacheFile &cachef
 
     if (pkg.end()) {
         /* todo: report all errors at the end */
-        if (action->alternates.size() == 1) {
-            fatal("%s:%d: No such package: %s", action->filename, action->linenum, action->alternates[0].c_str());
+        if (package->alternates.size() == 1) {
+            fatal("%s:%d: No such package: %s", package->filename, package->linenum, package->alternates[0].c_str());
         } else {
-            std::vector<std::string>::iterator i = action->alternates.begin();
+            std::vector<std::string>::iterator i = package->alternates.begin();
             std::string message = *(i++);
-            while (i != action->alternates.end()) {
+            while (i != package->alternates.end()) {
                 message.append(", ");
                 message.append(*(i++));
             }
-            fatal("%s:%d: No alternative available: %s", action->filename, action->linenum, message.c_str());
+            fatal("%s:%d: No alternative available: %s", package->filename, package->linenum, message.c_str());
         }
     }
 
@@ -249,8 +249,8 @@ static void eval_block(inapt_block *block, set<string> *defines, std::vector<ina
 
     for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++) {
         bool ok = true;
-        for (vector<const char *>::iterator j = (*i)->predicates.begin(); j < (*i)->predicates.end(); j++) {
-            if (!test_macro(*j, defines)) {
+        for (vector<std::string>::iterator j = (*i)->predicates.begin(); j < (*i)->predicates.end(); j++) {
+            if (!test_macro((*j).c_str(), defines)) {
                 ok = false;
                 break;
             }
@@ -285,42 +285,47 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
 
-    for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
-        (*i)->pkg = eval_pkg(*i, cachef);
+    for (vector<inapt_action *>::iterator i = final_actions->begin(); i != final_actions->end(); i++)
+        for (vector<inapt_package *>::iterator j = (*i)->packages.begin(); j != (*i)->packages.end(); j++)
+            (*j)->pkg = eval_pkg(*i, *j, cachef);
 
     for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
-        pkgCache::PkgIterator j = (*i)->pkg;
-        switch ((*i)->action) {
-            case inapt_action::INSTALL:
-                if (!j.CurrentVer() || cachef[j].Delete()) {
-                    printf("preinstall %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    DCache->MarkInstall(j, true);
-                }
-                break;
-            case inapt_action::REMOVE:
-                break;
-            default:
-                fatal("uninitialized action");
+        for (vector<inapt_package *>::iterator j = (*i)->packages.begin(); j != (*i)->packages.end(); j++) {
+            pkgCache::PkgIterator k = (*j)->pkg;
+            switch ((*i)->action) {
+                case inapt_action::INSTALL:
+                    if (!k.CurrentVer() || cachef[k].Delete()) {
+                        printf("preinstall %s %s:%d\n", (*j)->pkg.Name(), (*j)->filename, (*j)->linenum);
+                        DCache->MarkInstall(k, true);
+                    }
+                    break;
+                case inapt_action::REMOVE:
+                    break;
+                default:
+                    fatal("uninitialized action");
+            }
         }
     }
 
     for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
-        pkgCache::PkgIterator j = (*i)->pkg;
-        switch ((*i)->action) {
-            case inapt_action::INSTALL:
-                if ((!j.CurrentVer() && !cachef[j].Install()) || cachef[j].Delete()) {
-                    printf("install %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    DCache->MarkInstall(j, false);
-                }
-                break;
-            case inapt_action::REMOVE:
-                if ((j.CurrentVer() && !cachef[j].Delete()) || cachef[j].Install()) {
-                    printf("remove %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    DCache->MarkDelete(j, false);
-                }
-                break;
-            default:
-                fatal("uninitialized action");
+        for (vector<inapt_package *>::iterator j = (*i)->packages.begin(); j != (*i)->packages.end(); j++) {
+            pkgCache::PkgIterator k = (*j)->pkg;
+            switch ((*i)->action) {
+                case inapt_action::INSTALL:
+                    if ((!k.CurrentVer() && !cachef[k].Install()) || cachef[k].Delete()) {
+                        printf("install %s %s:%d\n", (*j)->pkg.Name(), (*j)->filename, (*j)->linenum);
+                        DCache->MarkInstall(k, false);
+                    }
+                    break;
+                case inapt_action::REMOVE:
+                    if ((k.CurrentVer() && !cachef[k].Delete()) || cachef[k].Install()) {
+                        printf("remove %s %s:%d\n", (*j)->pkg.Name(), (*j)->filename, (*j)->linenum);
+                        DCache->MarkDelete(k, false);
+                    }
+                    break;
+                default:
+                    fatal("uninitialized action");
+            }
         }
     }
 
@@ -352,7 +357,8 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
     pkgProblemResolver fix (DCache);
 
     for (vector<inapt_action *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
-	    fix.Protect((*i)->pkg);
+        for (vector<inapt_package *>::iterator j = (*i)->packages.begin(); j != (*i)->packages.end(); j++)
+	    fix.Protect((*j)->pkg);
     fix.Resolve();
 
     fprintf(stderr, "\n");
