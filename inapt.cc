@@ -180,7 +180,7 @@ bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
 }
 
 static void usage() {
-    fprintf(stderr, "Usage: %s [filename]\n", prog);
+    fprintf(stderr, "Usage: %s [filename..]\n", prog);
     exit(2);
 }
 
@@ -419,7 +419,6 @@ static void auto_profiles(std::set<std::string> *defines) {
 
 int main(int argc, char *argv[]) {
     int opt;
-    char *filename = NULL;
 
     set<string> defines;
 
@@ -437,15 +436,14 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (argc - optind == 1)
-        filename = argv[optind++];
-    else if (argc - optind > 0)
-        usage();
+    int num_files = argc - optind;
 
     inapt_block context;
     vector<inapt_package *> final_actions;
 
-    parser(filename, &context);
+    while (num_files--)
+        parser(argv[optind++], &context);
+
     auto_profiles(&defines);
     eval_profiles(&context, &defines);
     debug_profiles(&defines);
