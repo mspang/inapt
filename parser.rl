@@ -85,13 +85,12 @@ using namespace std;
     package_list = ((whitespace+ package_name)+ %add_list whitespace*);
     cmd_install = ('install' @install package_list ';');
     cmd_remove = ('remove' @remove package_list ';');
-    simple_cmd = cmd_install | cmd_remove;
     start_block = '{' @start_block;
     end_block = '}' @end_block;
     macro = alpha (alpha | digit | '-' | '+' | '.')*;
     cmd_if = 'if' whitespace+ macro >pkgstart %start_conditional whitespace* start_block whitespace*
              ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
-    cmd_list = (simple_cmd | cmd_if | whitespace)* end_block?;
+    cmd_list = (cmd_install | cmd_remove | cmd_if | whitespace)* end_block?;
     main := cmd_list;
 }%%
 

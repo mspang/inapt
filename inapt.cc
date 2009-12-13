@@ -244,7 +244,7 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
         pkgCache::PkgIterator j = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
-                if (!j.CurVersion() || cachef[j].Delete()) {
+                if (!j.CurrentVer() || cachef[j].Delete()) {
                     printf("preinstall %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, true);
                 }
@@ -260,7 +260,7 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
         pkgCache::PkgIterator j = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
-                if (!j.CurVersion() || cachef[j].Delete()) {
+                if ((!j.CurrentVer() && !cachef[j].Install()) || cachef[j].Delete()) {
                     printf("install %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(j, false);
                 } else {
@@ -268,8 +268,8 @@ static void exec_actions(std::vector<inapt_action *> *final_actions) {
                 }
                 break;
             case inapt_action::REMOVE:
-                if (j.CurVersion() || cachef[j].Install()) {
-                    printf("remove %s %s:%d %s\n", (*i)->package, (*i)->filename, (*i)->linenum, j.CurVersion());
+                if ((j.CurrentVer() && !cachef[j].Delete()) || cachef[j].Install()) {
+                    printf("remove %s %s:%d\n", (*i)->package, (*i)->filename, (*i)->linenum);
                     DCache->MarkDelete(j, false);
                 } else {
                     //printf("remove %s %s:%d NTD\n", (*i)->package, (*i)->filename, (*i)->linenum);
