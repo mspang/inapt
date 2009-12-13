@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <sys/utsname.h>
 #include <iostream>
 #include <cstdio>
 #include <fstream>
@@ -402,6 +403,20 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     run_install(cachef);
 }
 
+static void debug_profiles(std::set<std::string> *defines) {
+    fprintf(stderr, "defines: ");
+    for (set<string>::iterator i = defines->begin(); i != defines->end(); i++)
+        fprintf(stderr, "%s ", i->c_str());
+    fprintf(stderr, "\n");
+}
+
+static void auto_profiles(std::set<std::string> *defines) {
+    struct utsname uts;
+    if (uname(&uts))
+        fatalpe("uname");
+    defines->insert(uts.nodename);
+}
+
 int main(int argc, char *argv[]) {
     int opt;
     char *filename = NULL;
@@ -431,13 +446,9 @@ int main(int argc, char *argv[]) {
     vector<inapt_package *> final_actions;
 
     parser(filename, &context);
+    auto_profiles(&defines);
     eval_profiles(&context, &defines);
-
-    fprintf(stderr, "defines: ");
-    for (set<string>::iterator i = defines.begin(); i != defines.end(); i++)
-        fprintf(stderr, "%s ", i->c_str());
-    fprintf(stderr, "\n");
-
+    debug_profiles(&defines);
     eval_block(&context, &defines, &final_actions);
     exec_actions(&final_actions);
 }
