@@ -350,13 +350,10 @@ int main(int argc, char *argv[]) {
     set<string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "D:U:", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "D:", opts, NULL)) != -1) {
         switch (opt) {
             case 'D':
                 defines.insert(optarg);
-                break;
-            case 'U':
-                defines.erase(optarg);
                 break;
             case '?':
                 usage();
