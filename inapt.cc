@@ -28,6 +28,21 @@ static struct option opts[] = {
     { NULL, 0, NULL, '\0' },
 };
 
+class AwesomeRootSetFunc : public pkgDepCache::InRootSetFunc {
+    std::set<std::string> root;
+
+    public:
+        AwesomeRootSetFunc(std::vector<inapt_package *> *final_actions) {
+            for (vector<inapt_package *>::iterator i = final_actions->begin(); i != final_actions->end(); i++)
+                if ((*i)->action == inapt_action::INSTALL)
+                    root.insert((*i)->pkg.Name());
+        }
+        bool InRootSet(const pkgCache::PkgIterator &pkg) {
+//            debug("irs %s %d", pkg.Name(), root.find(pkg.Name()) != root.end());
+            return root.find(pkg.Name()) != root.end();
+        }
+};
+
 bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
                      bool Safety = true)
 {
@@ -296,11 +311,13 @@ static void eval_profiles(inapt_block *block, set<string> *defines) {
 }
 
 static void exec_actions(std::vector<inapt_package *> *final_actions) {
+    int marked = 0;
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
 
      _config->Set("Debug::pkgProblemResolver", true);
+//     _config->Set("Debug::pkgAutoRemove", true);
 
     OpTextProgress prog;
     pkgCacheFile cachef;
@@ -312,6 +329,8 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 
     pkgCache *cache = cachef;
     pkgDepCache *DCache = cachef;
+
+    pkgDepCache::ActionGroup group (*cachef);
 
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i != final_actions->end(); i++)
         (*i)->pkg = eval_pkg(*i, cachef);
@@ -339,6 +358,11 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
                 if ((!k.CurrentVer() && !cachef[k].Install()) || cachef[k].Delete()) {
                     printf("install %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
                     DCache->MarkInstall(k, false);
+                }
+                if (cachef[k].Flags & pkgCache::Flag::Auto) {
+                    marked++;
+                    debug("marking %s as manually installed", (*i)->pkg.Name());
+                    cachef->MarkAuto(k, false);
                 }
                 break;
             case inapt_action::REMOVE:
@@ -401,6 +425,26 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     fprintf(stderr, "\n");
 
     run_install(cachef);
+
+    if (marked) {
+        debug("marked %d packages, writing state file", marked);
+        cachef->writeStateFile(NULL);
+    }
+
+    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
+        cachef->MarkAuto(i, true);
+
+    AwesomeRootSetFunc root (final_actions);
+
+    DCache->MarkAndSweep(root);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "garbage packages:\n");
+    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
+       if (i.CurrentVer() && cachef[i].Garbage) {
+	       fprintf(stderr, "%s ", i.Name());
+	       fprintf(stderr, "%s\n", DCache->GetCandidateVer(i).VerStr());
+       }
+    }
 }
 
 static void debug_profiles(std::set<std::string> *defines) {
