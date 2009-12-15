@@ -12,7 +12,7 @@
 using namespace std;
 
 #define MAXDEPTH 100
-#define BUFSIZE 128
+#define BUFSIZE 4096
 
 %%{
     machine inapt;
@@ -175,13 +175,13 @@ void parser(const char *filename, inapt_block *top_block)
 
     const char *curfile = filename;
 
-    if (filename) {
+    if (!filename || !strcmp(filename, "-")) {
+        curfile = "stdin";
+        fd = 0;
+    } else {
         fd = open(filename, O_RDONLY);
         if (fd < 0)
             fatalpe("open: %s", filename);
-    } else {
-        curfile = "stdin";
-        fd = 0;
     }
 
     %% write init;

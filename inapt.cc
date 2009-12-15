@@ -485,6 +485,9 @@ int main(int argc, char *argv[]) {
     inapt_block context;
     vector<inapt_package *> final_actions;
 
+    if (!num_files)
+        parser(NULL, &context);
+
     while (num_files--)
         parser(argv[optind++], &context);
 
