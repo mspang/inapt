@@ -20,8 +20,6 @@
 #include "util.h"
 #include "acqprogress.h"
 
-using namespace std;
-
 char *prog = NULL;
 
 static struct option opts[] = {
@@ -38,7 +36,6 @@ class AwesomeRootSetFunc : public pkgDepCache::InRootSetFunc {
                     root.insert((*i)->pkg.Name());
         }
         bool InRootSet(const pkgCache::PkgIterator &pkg) {
-//            debug("irs %s %d", pkg.Name(), root.find(pkg.Name()) != root.end());
             return root.find(pkg.Name()) != root.end();
         }
 };
@@ -173,7 +170,7 @@ bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
       // Try to deal with missing package files
       if (Failed == true && PM->FixMissing() == false)
       {
-         cerr << ("Unable to correct missing packages.") << endl;
+         std::cerr << ("Unable to correct missing packages.") << std::endl;
          return _error->Error(("Aborting install."));
       }
 
@@ -199,7 +196,7 @@ static void usage() {
     exit(2);
 }
 
-static bool test_macro(const char *macro, set<string> *defines) {
+static bool test_macro(const char *macro, std::set<std::string> *defines) {
     return (*macro != '!' && defines->find(macro) != defines->end())
             || (*macro == '!' && defines->find(macro + 1) == defines->end());
 }
@@ -259,7 +256,7 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
     return pkg;
 }
 
-static bool test_macros(vector<std::string> *macros, set<string> *defines) {
+static bool test_macros(vector<std::string> *macros, std::set<std::string> *defines) {
     bool ok = true;
     for (vector<std::string>::iterator j = macros->begin(); j < macros->end(); j++) {
         if (!test_macro((*j).c_str(), defines)) {
@@ -270,14 +267,14 @@ static bool test_macros(vector<std::string> *macros, set<string> *defines) {
     return ok;
 }
 
-static void eval_action(inapt_action *action, set<string> *defines, vector<inapt_package *> *final_actions) {
+static void eval_action(inapt_action *action, std::set<std::string> *defines, std::vector<inapt_package *> *final_actions) {
     for (vector<inapt_package *>::iterator i = action->packages.begin(); i < action->packages.end(); i++) {
         if (test_macros(&(*i)->predicates, defines))
             final_actions->push_back(*i);
     }
 }
 
-static void eval_block(inapt_block *block, set<string> *defines, vector<inapt_package *> *final_actions) {
+static void eval_block(inapt_block *block, std::set<std::string> *defines, std::vector<inapt_package *> *final_actions) {
     if (!block)
         return;
 
@@ -293,7 +290,7 @@ static void eval_block(inapt_block *block, set<string> *defines, vector<inapt_pa
     }
 }
 
-static void eval_profiles(inapt_block *block, set<string> *defines) {
+static void eval_profiles(inapt_block *block, std::set<std::string> *defines) {
     if (!block)
         return;
 
@@ -449,7 +446,7 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 
 static void debug_profiles(std::set<std::string> *defines) {
     fprintf(stderr, "defines: ");
-    for (set<string>::iterator i = defines->begin(); i != defines->end(); i++)
+    for (std::set<std::string>::iterator i = defines->begin(); i != defines->end(); i++)
         fprintf(stderr, "%s ", i->c_str());
     fprintf(stderr, "\n");
 }
@@ -464,7 +461,7 @@ static void auto_profiles(std::set<std::string> *defines) {
 int main(int argc, char *argv[]) {
     int opt;
 
-    set<string> defines;
+    std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
     while ((opt = getopt_long(argc, argv, "p:", opts, NULL)) != -1) {
@@ -483,7 +480,7 @@ int main(int argc, char *argv[]) {
     int num_files = argc - optind;
 
     inapt_block context;
-    vector<inapt_package *> final_actions;
+    std::vector<inapt_package *> final_actions;
 
     if (!num_files)
         parser(NULL, &context);
