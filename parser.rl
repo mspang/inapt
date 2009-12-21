@@ -28,7 +28,7 @@ using namespace std;
         inapt_package *tmp_package = new inapt_package;
         tmp_package->alternates.swap(alternates);
         tmp_package->action = tmp_action->action;
-        tmp_package->linenum = curline;
+        tmp_package->linenum = curline - (*p == '\n');
         tmp_package->filename = curfile;
         tmp_package->predicates.swap(pkg_predicates);
         tmp_action->packages.push_back(tmp_package);
@@ -120,7 +120,7 @@ using namespace std;
     pkg_predicate = '@' ('!'? profile) >strstart %pkg_predicate whitespace+;
     cmd_predicate = '@' ('!'? profile) >strstart %cmd_predicate whitespace+;
     package_alternates = package_name >strstart %add_alternate ('/' package_name >strstart %add_alternate)*;
-    package_list = ((whitespace+ pkg_predicate? package_alternates)+ %add_package whitespace*);
+    package_list = ((whitespace+ pkg_predicate* package_alternates)+ %add_package whitespace*);
     profile_list = (whitespace+ profile >strstart %profile)* whitespace*;
     cmd_install = ('install' @start_install package_list ';');
     cmd_remove = ('remove' @start_remove package_list ';');
@@ -129,7 +129,7 @@ using namespace std;
     end_block = '}' @end_block;
     cmd_if = 'if' whitespace+ profile >strstart %start_conditional whitespace* start_block whitespace*
              ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
-    cmd = whitespace* (cmd_predicate? (cmd_install | cmd_remove | cmd_profiles) | cmd_if);
+    cmd = whitespace* (cmd_predicate* (cmd_install | cmd_remove | cmd_profiles) | cmd_if);
     cmd_list = cmd* whitespace* end_block?;
     main := cmd_list;
 }%%

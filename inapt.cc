@@ -235,6 +235,33 @@ static void dump_actions(pkgCacheFile &cache) {
     }
 }
 
+static bool sanity_check(std::vector<inapt_package *> *final_actions, pkgCacheFile &cache) {
+    bool okay = true;
+    std::map<std::string, inapt_package *> packages;
+
+    for (vector<inapt_package *>::iterator i = final_actions->begin(); i != final_actions->end(); i++) {
+        if (packages.find((*i)->pkg.Name()) != packages.end()) {
+            inapt_package *first = packages[(*i)->pkg.Name()];
+            inapt_package *current = *i;
+            _error->Error("Multiple directives for package %s at %s:%d and %s:%d",
+                    (*i)->pkg.Name(), first->filename, first->linenum, current->filename, current->linenum);
+            debug("foo %s", (*i)->pkg.Name());
+            okay = false;
+            continue;
+        }
+        packages[(*i)->pkg.Name()] = *i;
+    }
+
+    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
+        if (cache[i].Delete() && (i->Flags & pkgCache::Flag::Essential || i->Flags & pkgCache::Flag::Important)) {
+            _error->Error("Removing essential package %s", i.Name());
+            okay = false;
+        }
+    }
+
+    return okay;
+}
+
 static void show_breakage(pkgCacheFile &cache) {
     fprintf(stderr, "fatal: Unable to solve dependencies\n");
     fprintf(stderr, "The following packages are broken:");
@@ -329,6 +356,9 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     cache->MarkAndSweep();
     run_autoremove(cache);
 
+    if (!sanity_check(final_actions, cache))
+        return;
+
     if (_config->FindB("Inapt::Simulate", false)) {
         pkgSimulate PM (cache);
         PM.DoInstall(-1);
@@ -374,8 +404,6 @@ static void set_option(char *opt) {
 
     std::string option (opt, eq - opt);
     std::string value (eq + 1);
-
-    debug("setting '%s'='%s'", option.c_str(), value.c_str());
 
     _config->Set(option, value);
 }
