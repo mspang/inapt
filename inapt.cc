@@ -114,35 +114,35 @@ static bool test_macro(const char *macro, std::set<std::string> *defines) {
 static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cache) {
     pkgCache::PkgIterator pkg;
 
-    if (!pkg.end()) fatal("omg"); /* TODO */
-
     for (std::vector<std::string>::iterator i = package->alternates.begin(); i != package->alternates.end(); i++) {
-        pkg = cache->FindPkg(*i);
+        pkgCache::PkgIterator tmp = cache->FindPkg(*i);
 
         /* no such package */
-        if (pkg.end())
+        if (tmp.end())
             continue;
 
         /* real package */
-        if (cache[pkg].CandidateVer)
+        if (cache[tmp].CandidateVer) {
+            pkg = tmp;
             break;
+        }
 
         /* virtual package */
-        if (pkg->ProvidesList) {
-            if (!pkg.ProvidesList()->NextProvides) {
-                pkgCache::PkgIterator tmp = pkg.ProvidesList().OwnerPkg();
+        if (tmp->ProvidesList) {
+            if (!tmp.ProvidesList()->NextProvides) {
+                pkgCache::PkgIterator provide = tmp.ProvidesList().OwnerPkg();
                 if (package->action == inapt_action::INSTALL) {
-                    debug("selecting %s instead of %s", tmp.Name(), pkg.Name());
-                    pkg = tmp;
+                    debug("selecting %s instead of %s", provide.Name(), tmp.Name());
+                    pkg = provide;
                     break;
                 } else {
-                    debug("will not remove %s instead of virtual package %s", tmp.Name(), pkg.Name());
+                    debug("will not remove %s instead of virtual package %s", provide.Name(), tmp.Name());
                 }
             } else {
-                debug("%s is a virtual package", pkg.Name());
+                debug("%s is a virtual package", tmp.Name());
             }
         } else {
-            debug("%s is a virtual packages with no provides", pkg.Name());
+            debug("%s is a virtual packages with no provides", tmp.Name());
         }
     }
 
