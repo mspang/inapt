@@ -102,7 +102,7 @@ void run_autoremove(pkgCacheFile &cache) {
 }
 
 static void usage() {
-    fprintf(stderr, "Usage: %s [filename..]\n", prog);
+    fprintf(stderr, "Usage: %s [options] [filename..]\n", prog);
     exit(2);
 }
 
