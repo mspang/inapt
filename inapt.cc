@@ -29,28 +29,25 @@ static struct option opts[] = {
     { NULL, 0, NULL, '\0' },
 };
 
-bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
-                     bool Safety = true)
-{
+bool run_install(pkgCacheFile &cache) {
    if (_config->FindB("Inapt::Purge", false))
-      for (pkgCache::PkgIterator i = Cache->PkgBegin(); !i.end(); i++)
-         if (!i.Purge() && Cache[i].Mode == pkgDepCache::ModeDelete)
-            Cache->MarkDelete(i, true);
+      for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
+         if (!i.Purge() && cache[i].Mode == pkgDepCache::ModeDelete)
+            cache->MarkDelete(i, true);
 
-   if (Cache->BrokenCount())
+   if (cache->BrokenCount())
        fatal("broken packages during install");
 
-   if (!Cache->DelCount() && !Cache->InstCount() && !Cache->BadCount())
+   if (!cache->DelCount() && !cache->InstCount() && !cache->BadCount())
       return true;
 
-   pkgRecords Recs(Cache);
-
-   if (_error->PendingError() == true)
+   pkgRecords Recs (cache);
+   if (_error->PendingError())
       return false;
 
    FileFd Lock;
    Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
-   if (_error->PendingError() == true)
+   if (_error->PendingError())
        return _error->Error(("Unable to lock the download directory"));
 
    unsigned int width = 80;
@@ -61,9 +58,9 @@ bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
    if (List.ReadMainList() == false)
       return _error->Error(("The list of sources could not be read."));
 
-   SPtr<pkgPackageManager> PM= _system->CreatePM(Cache);
+   SPtr<pkgPackageManager> PM= _system->CreatePM(cache);
    if (PM->GetArchives(&Fetcher, &List, &Recs) == false ||
-       _error->PendingError() == true)
+       _error->PendingError())
       return false;
 
   if (Fetcher.Run() == pkgAcquire::Failed)
