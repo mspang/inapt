@@ -133,10 +133,8 @@ static bool test_macro(const char *macro, std::set<std::string> *defines) {
             || (*macro == '!' && defines->find(macro + 1) == defines->end());
 }
 
-static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cachef) {
+static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cache) {
     pkgCache::PkgIterator pkg;
-
-    pkgCache *cache = cachef;
 
     if (!pkg.end()) fatal("omg"); /* TODO */
 
@@ -148,7 +146,7 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
             continue;
 
         /* real package */
-        if (cachef[pkg].CandidateVer)
+        if (cache[pkg].CandidateVer)
             break;
 
         /* virtual package */
@@ -271,25 +269,25 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 //     _config->Set("Debug::pkgAutoRemove", true);
 
     OpTextProgress prog;
-    pkgCacheFile cachef;
+    pkgCacheFile cache;
 
-    if (cachef.Open(prog) == false) {
+    if (cache.Open(prog) == false) {
 	_error->DumpErrors();
         exit(1);
     }
 
-    pkgDepCache::ActionGroup group (*cachef);
+    pkgDepCache::ActionGroup group (cache);
 
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i != final_actions->end(); i++)
-        (*i)->pkg = eval_pkg(*i, cachef);
+        (*i)->pkg = eval_pkg(*i, cache);
 
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator k = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
-                if (!k.CurrentVer() || cachef[k].Delete()) {
+                if (!k.CurrentVer() || cache[k].Delete()) {
                     debug("install %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    cachef->MarkInstall(k, true);
+                    cache->MarkInstall(k, true);
                 }
                 break;
             case inapt_action::REMOVE:
@@ -303,20 +301,20 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
         pkgCache::PkgIterator k = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
-                if ((!k.CurrentVer() && !cachef[k].Install()) || cachef[k].Delete()) {
+                if ((!k.CurrentVer() && !cache[k].Install()) || cache[k].Delete()) {
                     debug("install %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    cachef->MarkInstall(k, false);
+                    cache->MarkInstall(k, false);
                 }
-                if (cachef[k].Flags & pkgCache::Flag::Auto) {
+                if (cache[k].Flags & pkgCache::Flag::Auto) {
                     marked++;
                     debug("marking %s as manually installed", (*i)->pkg.Name());
-                    cachef->MarkAuto(k, false);
+                    cache->MarkAuto(k, false);
                 }
                 break;
             case inapt_action::REMOVE:
-                if ((k.CurrentVer() && !cachef[k].Delete()) || cachef[k].Install()) {
+                if ((k.CurrentVer() && !cache[k].Delete()) || cache[k].Install()) {
                     debug("remove %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    cachef->MarkDelete(k, false);
+                    cache->MarkDelete(k, false);
                 }
                 break;
             default:
@@ -324,46 +322,46 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
         }
     }
 
-    dump_nondownloadable(cachef);
-    dump_actions(cachef);
+    dump_nondownloadable(cache);
+    dump_actions(cache);
 
-    if (cachef->BrokenCount()) {
-        pkgProblemResolver fix (cachef);
+    if (cache->BrokenCount()) {
+        pkgProblemResolver fix (cache);
         for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
             fix.Protect((*i)->pkg);
         fix.Resolve();
 
-        dump_actions(cachef);
+        dump_actions(cache);
     }
 
     if (_config->FindB("Inapt::AutomaticRemove", false)) {
-        cachef->MarkAndSweep();
-        run_autoremove(cachef);
+        cache->MarkAndSweep();
+        run_autoremove(cache);
     }
 
-    if (!run_install(cachef)) {
+    if (!run_install(cache)) {
 	_error->DumpErrors();
         fatal("errors");
     }
 
     if (marked) {
         debug("marked %d packages, writing state file", marked);
-        cachef->writeStateFile(NULL);
+        cache->writeStateFile(NULL);
     }
 
     /*
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
-        cachef->MarkAuto(i, true);
+        cache->MarkAuto(i, true);
 
     AwesomeRootSetFunc root (final_actions);
 
-    cachef->MarkAndSweep(root);
+    cache->MarkAndSweep(root);
     fprintf(stderr, "\n");
     fprintf(stderr, "garbage packages:\n");
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
-       if (i.CurrentVer() && cachef[i].Garbage) {
+       if (i.CurrentVer() && cache[i].Garbage) {
 	       fprintf(stderr, "%s ", i.Name());
-	       fprintf(stderr, "%s\n", cachef->GetCandidateVer(i).VerStr());
+	       fprintf(stderr, "%s\n", cache->GetCandidateVer(i).VerStr());
        }
     }
     */
