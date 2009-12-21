@@ -23,7 +23,6 @@
 char *prog = NULL;
 
 static struct option opts[] = {
-    { "auto-remove", 0, NULL, 'g' },
     { "simulate", 0, NULL, 's' },
     { "purge", 0, NULL, 'u' },
     { NULL, 0, NULL, '\0' },
@@ -253,9 +252,6 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
 
-//     _config->Set("Debug::pkgProblemResolver", true);
-//     _config->Set("Debug::pkgAutoRemove", true);
-
     OpTextProgress prog;
     pkgCacheFile cache;
 
@@ -270,6 +266,7 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     if (_error->PendingError())
         return;
 
+    // preliminary loop (auto-installs, includes recommends - could do this manually)
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator k = (*i)->pkg;
         switch ((*i)->action) {
@@ -286,12 +283,13 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
         }
     }
 
+    // secondary loop (removes package and reinstalls auto-removed packages)
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator k = (*i)->pkg;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if ((!k.CurrentVer() && !cache[k].Install()) || cache[k].Delete()) {
-                    debug("install %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
+                    debug("force install %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
                     cache->MarkInstall(k, false);
                 }
                 if (cache[k].Flags & pkgCache::Flag::Auto) {
@@ -328,10 +326,8 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
             show_breakage(cache);
     }
 
-    if (_config->FindB("Inapt::AutomaticRemove", false)) {
-        cache->MarkAndSweep();
-        run_autoremove(cache);
-    }
+    cache->MarkAndSweep();
+    run_autoremove(cache);
 
     if (_config->FindB("Inapt::Simulate", false)) {
         pkgSimulate PM (cache);
@@ -390,16 +386,13 @@ int main(int argc, char *argv[]) {
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:o:sdg", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:o:sd", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
                 break;
             case '?':
                 usage();
-                break;
-            case 'g':
-                _config->Set("Inapt::AutomaticRemove", true);
                 break;
             case 's':
                 _config->Set("Inapt::Simulate", true);
