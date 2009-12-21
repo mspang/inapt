@@ -29,32 +29,13 @@ static struct option opts[] = {
     { NULL, 0, NULL, '\0' },
 };
 
-class AwesomeRootSetFunc : public pkgDepCache::InRootSetFunc {
-    std::set<std::string> root;
-
-    public:
-        AwesomeRootSetFunc(std::vector<inapt_package *> *final_actions) {
-            for (vector<inapt_package *>::iterator i = final_actions->begin(); i != final_actions->end(); i++)
-                if ((*i)->action == inapt_action::INSTALL)
-                    root.insert((*i)->pkg.Name());
-        }
-        bool InRootSet(const pkgCache::PkgIterator &pkg) {
-            return root.find(pkg.Name()) != root.end();
-        }
-};
-
 bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
                      bool Safety = true)
 {
-   if (_config->FindB("APT::Get::Purge", false) == true)
-   {
-      pkgCache::PkgIterator I = Cache->PkgBegin();
-      for (; I.end() == false; I++)
-      {
-         if (I.Purge() == false && Cache[I].Mode == pkgDepCache::ModeDelete)
-            Cache->MarkDelete(I, true);
-      }
-   }
+   if (_config->FindB("Inapt::Purge", false))
+      for (pkgCache::PkgIterator i = Cache->PkgBegin(); !i.end(); i++)
+         if (!i.Purge() && Cache[i].Mode == pkgDepCache::ModeDelete)
+            Cache->MarkDelete(i, true);
 
    if (Cache->BrokenCount())
        fatal("broken packages during install");
@@ -345,26 +326,13 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     }
 
     if (marked) {
-        debug("marked %d packages, writing state file", marked);
-        cache->writeStateFile(NULL);
+        if (_config->FindB("Inapt::Simulate", false)) {
+            debug("marked %d packages", marked);
+        } else {
+            debug("marked %d packages, writing state file", marked);
+            cache->writeStateFile(NULL);
+        }
     }
-
-    /*
-    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
-        cache->MarkAuto(i, true);
-
-    AwesomeRootSetFunc root (final_actions);
-
-    cache->MarkAndSweep(root);
-    fprintf(stderr, "\n");
-    fprintf(stderr, "garbage packages:\n");
-    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
-       if (i.CurrentVer() && cache[i].Garbage) {
-	       fprintf(stderr, "%s ", i.Name());
-	       fprintf(stderr, "%s\n", cache->GetCandidateVer(i).VerStr());
-       }
-    }
-    */
 }
 
 static void debug_profiles(std::set<std::string> *defines) {
