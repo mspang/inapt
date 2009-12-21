@@ -73,4 +73,6 @@ static inline char *xstrndup(const char *s, size_t n) {
     return dup;
 }
 
+extern bool debug_enabled;
+
 #endif

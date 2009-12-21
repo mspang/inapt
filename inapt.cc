@@ -90,10 +90,12 @@ bool run_install(pkgCacheFile &cache) {
 
 void run_autoremove(pkgCacheFile &cache)
 {
+    bool purge = _config->FindB("Inapt::Purge", false);
+
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
         if (cache[i].Garbage) {
             debug("autoremove: %s", i.Name());
-            cache->MarkDelete(i, 0);
+            cache->MarkDelete(i, purge);
         }
     }
 
@@ -238,6 +240,7 @@ static void dump_actions(pkgCacheFile &cache) {
 
 static void exec_actions(std::vector<inapt_package *> *final_actions) {
     int marked = 0;
+    bool purge = _config->FindB("Inapt::Purge", false);
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
@@ -290,10 +293,9 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
                 }
                 break;
             case inapt_action::REMOVE:
-                if ((k.CurrentVer() && !cache[k].Delete()) || cache[k].Install()) {
+                if ((k.CurrentVer() && !cache[k].Delete()) || cache[k].Install())
                     debug("remove %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    cache->MarkDelete(k, false);
-                }
+                cache->MarkDelete(k, purge);
                 break;
             default:
                 fatal("uninitialized action");
@@ -364,7 +366,7 @@ int main(int argc, char *argv[]) {
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:s", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:sd", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
@@ -380,6 +382,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'u':
                 _config->Set("Inapt::Purge", true);
+                break;
+            case 'd':
+                debug_enabled = true;
                 break;
             default:
                 fatal("error parsing arguments");

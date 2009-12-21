@@ -11,6 +11,8 @@
 
 #include "util.h"
 
+bool debug_enabled = false;
+
 static void errmsg(int prio, const char *prefix, const char *fmt, va_list args) {
     fprintf(stderr, "%s: ", prefix);
     vfprintf(stderr, fmt, args);
@@ -64,7 +66,8 @@ void notice(const char *msg, ...) {
 void debug(const char *msg, ...) {
     va_list args;
     va_start(args, msg);
-    errmsg(LOG_DEBUG, "debug", msg, args);
+    if (debug_enabled)
+        errmsg(LOG_DEBUG, "debug", msg, args);
     va_end(args);
 }
 
