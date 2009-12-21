@@ -112,7 +112,7 @@ using namespace std;
     whitespace = [\t\v\f\r ] | comment | newline;
     profile = alpha (alpha | digit | '-' | '+' | '.')*;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >strstart;
-    predicate = '@' ('!'? profile) >strstart %predicate whitespace+;
+    predicate = '@' ('!'? profile ('/' '!'? profile)*) >strstart %predicate whitespace+;
     package_alternates = package_name >strstart %add_alternate ('/' package_name >strstart %add_alternate)*;
     package_list = ((whitespace+ predicate* package_alternates)+ %add_package whitespace*);
     profile_list = (whitespace+ profile >strstart %profile)* whitespace*;

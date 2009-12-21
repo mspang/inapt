@@ -25,6 +25,7 @@ PRINTF_LIKE(0) void error(const char *, ...);
 PRINTF_LIKE(0) void warn(const char *, ...);
 PRINTF_LIKE(0) void notice(const char *, ...);
 PRINTF_LIKE(0) void debug(const char *, ...);
+PRINTF_LIKE(1) void debugn(int level, const char *, ...);
 PRINTF_LIKE(0) void errorpe(const char *, ...);
 PRINTF_LIKE(0) void warnpe(const char *, ...);
 
@@ -73,6 +74,6 @@ static inline char *xstrndup(const char *s, size_t n) {
     return dup;
 }
 
-extern bool debug_enabled;
+extern int debug_level;
 
 #endif

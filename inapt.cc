@@ -110,6 +110,26 @@ static bool test_profile(const char *profile, std::set<std::string> *defines) {
             || (*profile == '!' && defines->find(profile + 1) == defines->end());
 }
 
+static bool test_anyprofile(std::string &profile, std::set<std::string> *defines) {
+    char *s = xstrdup(profile.c_str());
+    const char *c = strtok(s, "/");
+
+    if (test_profile(c, defines)) {
+        free(s);
+        return true;
+    }
+
+    while ((c = strtok(NULL, "/")) != NULL) {
+        if (test_profile(c, defines)) {
+            free(s);
+            return true;
+        }
+    }
+
+    free(s);
+    return false;
+}
+
 static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cache) {
     pkgCache::PkgIterator pkg;
 
@@ -165,7 +185,7 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
 static bool test_profiles(vector<std::string> *profiles, std::set<std::string> *defines) {
     bool ok = true;
     for (vector<std::string>::iterator j = profiles->begin(); j < profiles->end(); j++) {
-        if (!test_profile((*j).c_str(), defines)) {
+        if (!test_anyprofile(*j, defines)) {
             ok = false;
             break;
         }
@@ -429,7 +449,7 @@ int main(int argc, char *argv[]) {
                 _config->Set("Inapt::Purge", true);
                 break;
             case 'd':
-                debug_enabled = true;
+                debug_level++;
                 break;
             case 'o':
                 set_option(optarg);
