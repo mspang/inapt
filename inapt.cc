@@ -320,6 +320,12 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
         run_autoremove(cache);
     }
 
+    if (_config->FindB("Inapt::Simulate", false)) {
+        pkgSimulate PM (cache);
+        PM.DoInstall(-1);
+        return;
+    }
+
     run_install(cache);
     if (_error->PendingError())
         return;
@@ -358,7 +364,7 @@ int main(int argc, char *argv[]) {
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:s", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
