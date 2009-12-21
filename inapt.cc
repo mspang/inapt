@@ -371,13 +371,26 @@ static void auto_profiles(std::set<std::string> *defines) {
     defines->insert(uts.nodename);
 }
 
+static void set_option(char *opt) {
+    char *eq = strchr(opt, '=');
+    if (!eq)
+        fatal("invalid syntax for '%s': must be <option>=<value>", opt);
+
+    std::string option (opt, eq - opt);
+    std::string value (eq + 1);
+
+    debug("setting '%s'='%s'", option.c_str(), value.c_str());
+
+    _config->Set(option, value);
+}
+
 int main(int argc, char *argv[]) {
     int opt;
 
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:sdg", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:o:sdg", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
@@ -396,6 +409,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'd':
                 debug_enabled = true;
+                break;
+            case 'o':
+                set_option(optarg);
                 break;
             default:
                 fatal("error parsing arguments");
