@@ -92,13 +92,13 @@ void run_autoremove(pkgCacheFile &cache)
 {
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
         if (cache[i].Garbage) {
-            debug("garbage: %s", i.Name());
+            debug("autoremove: %s", i.Name());
             cache->MarkDelete(i, 0);
         }
     }
 
     if (cache->BrokenCount())
-        fatal("ogawd");
+        fatal("automatic removal broke packages");
 }
 
 static void usage() {
@@ -147,9 +147,8 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
     }
 
     if (pkg.end()) {
-        /* todo: report all errors at the end */
         if (package->alternates.size() == 1) {
-            fatal("%s:%d: No such package: %s", package->filename, package->linenum, package->alternates[0].c_str());
+            _error->Error("%s:%d: No such package: %s", package->filename, package->linenum, package->alternates[0].c_str());
         } else {
             std::vector<std::string>::iterator i = package->alternates.begin();
             std::string message = *(i++);
@@ -157,7 +156,7 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
                 message.append(", ");
                 message.append(*(i++));
             }
-            fatal("%s:%d: No alternative available: %s", package->filename, package->linenum, message.c_str());
+            _error->Error("%s:%d: No alternative available: %s", package->filename, package->linenum, message.c_str());
         }
     }
 
@@ -249,15 +248,16 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     OpTextProgress prog;
     pkgCacheFile cache;
 
-    if (cache.Open(prog) == false) {
-	_error->DumpErrors();
-        exit(1);
-    }
+    if (cache.Open(prog) == false)
+        return;
 
     pkgDepCache::ActionGroup group (cache);
 
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i != final_actions->end(); i++)
         (*i)->pkg = eval_pkg(*i, cache);
+
+    if (_error->PendingError())
+        return;
 
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator k = (*i)->pkg;
@@ -309,6 +309,9 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
             fix.Protect((*i)->pkg);
         fix.Resolve();
 
+       if (_error->PendingError())
+          return;
+
         dump_actions(cache);
     }
 
@@ -317,10 +320,9 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
         run_autoremove(cache);
     }
 
-    if (!run_install(cache)) {
-	_error->DumpErrors();
-        fatal("errors");
-    }
+    run_install(cache);
+    if (_error->PendingError())
+        return;
 
     if (marked) {
         if (_config->FindB("Inapt::Simulate", false)) {
@@ -333,10 +335,14 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 }
 
 static void debug_profiles(std::set<std::string> *defines) {
-    fprintf(stderr, "debug: defines: ");
-    for (std::set<std::string>::iterator i = defines->begin(); i != defines->end(); i++)
-        fprintf(stderr, "%s ", i->c_str());
-    fprintf(stderr, "\n");
+    std::string profiles = "profiles:";
+
+    for (std::set<std::string>::iterator i = defines->begin(); i != defines->end(); i++) {
+        profiles.append(" ");
+        profiles.append(*i);
+    }
+
+    debug("%s", profiles.c_str());
 }
 
 static void auto_profiles(std::set<std::string> *defines) {
@@ -391,9 +397,7 @@ int main(int argc, char *argv[]) {
     eval_block(&context, &defines, &final_actions);
     exec_actions(&final_actions);
 
-    /* TODO: remove this */
     if (_error->PendingError()) {
-        warn("uncaught errors:");
 	_error->DumpErrors();
         exit(1);
     }
