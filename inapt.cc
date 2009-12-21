@@ -67,11 +67,8 @@ bool run_install(pkgCacheFile &cache) {
 
   bool Failed = false;
   for (pkgAcquire::ItemIterator i = Fetcher.ItemsBegin(); i != Fetcher.ItemsEnd(); i++) {
-     if ((*i)->Status != pkgAcquire::Item::StatDone || (*i)->Complete != true) {
-         fprintf(stderr,("Failed to fetch %s  %s\n"),(*i)->DescURI().c_str(),
-                 (*i)->ErrorText.c_str());
+     if ((*i)->Status != pkgAcquire::Item::StatDone || (*i)->Complete != true)
          Failed = true;
-     }
   }
 
   if (Failed)
