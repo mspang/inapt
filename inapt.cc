@@ -172,8 +172,7 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
             std::vector<std::string>::iterator i = package->alternates.begin();
             std::string message = *(i++);
             while (i != package->alternates.end()) {
-                message.append(", ");
-                message.append(*(i++));
+                message.append(", ").append(*(i++));
             }
             _error->Error("%s:%d: No alternative available: %s", package->filename, package->linenum, message.c_str());
         }
@@ -283,13 +282,12 @@ static bool sanity_check(std::vector<inapt_package *> *final_actions, pkgCacheFi
 }
 
 static void show_breakage(pkgCacheFile &cache) {
-    fprintf(stderr, "fatal: Unable to solve dependencies\n");
-    fprintf(stderr, "The following packages are broken:");
+    std::string broken;
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
         if (cache[i].NowBroken() || cache[i].InstBroken())
-            fprintf(stderr, " %s", i.Name());
-    fprintf(stderr, "\n");
-    exit(1);
+            broken.append(" ").append(i.Name());
+
+    _error->Error("Broken packages:%s", broken.c_str());
 }
 
 static void exec_actions(std::vector<inapt_package *> *final_actions) {
@@ -369,8 +367,10 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
             fix.Protect((*i)->pkg);
         fix.Resolve();
 
-        if (cache->BrokenCount())
+        if (cache->BrokenCount()) {
             show_breakage(cache);
+            return;
+        }
     }
 
     cache->MarkAndSweep();
