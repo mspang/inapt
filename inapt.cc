@@ -68,13 +68,9 @@ bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
       return false;
 
    FileFd Lock;
-   if (_config->FindB("Debug::NoLocking",false) == false &&
-       _config->FindB("APT::Get::Print-URIs") == false)
-   {
-      Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
-      if (_error->PendingError() == true)
-         return _error->Error(("Unable to lock the download directory"));
-   }
+   Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
+   if (_error->PendingError() == true)
+       return _error->Error(("Unable to lock the download directory"));
 
    unsigned int width = 80;
    AcqTextStatus status (width, 0);
@@ -89,104 +85,29 @@ bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
        _error->PendingError() == true)
       return false;
 
-   if (_error->PendingError() == true)
-      return false;
+  if (Fetcher.Run() == pkgAcquire::Failed)
+     return false;
 
-   while (1)
-   {
-      bool Transient = false;
-      if (_config->FindB("APT::Get::Download",true) == false)
-      {
-         for (pkgAcquire::ItemIterator I = Fetcher.ItemsBegin(); I < Fetcher.ItemsEnd();)
-         {
-            if ((*I)->Local == true)
-            {
-               I++;
-               continue;
-            }
-
-            // Close the item and check if it was found in cache
-            (*I)->Finished();
-            if ((*I)->Complete == false)
-               Transient = true;
-
-            // Clear it out of the fetch list
-            delete *I;
-            I = Fetcher.ItemsBegin();
-         }
-      }
-
-      if (Fetcher.Run() == pkgAcquire::Failed)
-         return false;
-
-      // Print out errors
-      bool Failed = false;
-      for (pkgAcquire::ItemIterator I = Fetcher.ItemsBegin(); I != Fetcher.ItemsEnd(); I++)
-      {
-         if ((*I)->Status == pkgAcquire::Item::StatDone &&
-             (*I)->Complete == true)
-            continue;
-
-         if ((*I)->Status == pkgAcquire::Item::StatIdle)
-         {
-            Transient = true;
-            // Failed = true;
-            continue;
-         }
-
+  bool Failed = false;
+  for (pkgAcquire::ItemIterator I = Fetcher.ItemsBegin(); I != Fetcher.ItemsEnd(); I++)
+  {
+     if ((*I)->Status != pkgAcquire::Item::StatDone || (*I)->Complete != true) {
          fprintf(stderr,("Failed to fetch %s  %s\n"),(*I)->DescURI().c_str(),
                  (*I)->ErrorText.c_str());
          Failed = true;
-      }
+     }
+  }
 
-      /* If we are in no download mode and missing files and there were
-         'failures' then the user must specify -m. Furthermore, there
-         is no such thing as a transient error in no-download mode! */
-      if (Transient == true &&
-          _config->FindB("APT::Get::Download",true) == false)
-      {
-         Transient = false;
-         Failed = true;
-      }
+  if (Failed)
+     return _error->Error("Unable to fetch some archives");
 
-      if (_config->FindB("APT::Get::Download-Only",false) == true)
-      {
-         if (Failed == true && _config->FindB("APT::Get::Fix-Missing",false) == false)
-            return _error->Error(("Some files failed to download"));
-         //c1out << _("Download complete and in download only mode") << endl;
-         return true;
-      }
+  _system->UnLock();
 
-      if (Failed == true && _config->FindB("APT::Get::Fix-Missing",false) == false)
-      {
-         return _error->Error(("Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"));
-      }
+  pkgPackageManager::OrderResult Res = PM->DoInstall(-1);
+  if (Res == pkgPackageManager::Completed)
+     return true;
 
-      if (Transient == true && Failed == true)
-         return _error->Error(("--fix-missing and media swapping is not currently supported"));
-
-      // Try to deal with missing package files
-      if (Failed == true && PM->FixMissing() == false)
-      {
-         std::cerr << ("Unable to correct missing packages.") << std::endl;
-         return _error->Error(("Aborting install."));
-      }
-
-      _system->UnLock();
-      int status_fd = _config->FindI("APT::Status-Fd",-1);
-      pkgPackageManager::OrderResult Res = PM->DoInstall(status_fd);
-      if (Res == pkgPackageManager::Failed || _error->PendingError() == true)
-         return false;
-      if (Res == pkgPackageManager::Completed)
-         return true;
-
-      // Reload the fetcher object and loop again for media swapping
-      Fetcher.Shutdown();
-      if (PM->GetArchives(&Fetcher,&List,&Recs) == false)
-         return false;
-
-      _system->Lock();
-   }
+  return false;
 }
 
 void run_autoremove(pkgCacheFile &cache)
@@ -406,12 +327,14 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     dump_nondownloadable(cachef);
     dump_actions(cachef);
 
-    pkgProblemResolver fix (cachef);
-    for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
-        fix.Protect((*i)->pkg);
-    fix.Resolve();
+    if (cachef->BrokenCount()) {
+        pkgProblemResolver fix (cachef);
+        for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
+            fix.Protect((*i)->pkg);
+        fix.Resolve();
 
-    dump_actions(cachef);
+        dump_actions(cachef);
+    }
 
     if (_config->FindB("Inapt::AutomaticRemove", false)) {
         cachef->MarkAndSweep();
