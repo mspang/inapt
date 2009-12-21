@@ -24,6 +24,8 @@ char *prog = NULL;
 
 static struct option opts[] = {
     { "auto-remove", 0, NULL, 'z' },
+    { "simulate", 0, NULL, 's' },
+    { "purge", 0, NULL, 'u' },
     { NULL, 0, NULL, '\0' },
 };
 
@@ -54,19 +56,14 @@ bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
       }
    }
 
-   if (Cache->BrokenCount() != 0)
-   {
-      return _error->Error("Internal error, run_install was called with broken packages!");
-   }
+   if (Cache->BrokenCount())
+       fatal("broken packages during install");
 
-   if (Cache->DelCount() == 0 && Cache->InstCount() == 0 &&
-       Cache->BadCount() == 0)
+   if (!Cache->DelCount() && !Cache->InstCount() && !Cache->BadCount())
       return true;
 
-   if (Cache->DelCount() != 0 && _config->FindB("APT::Get::Remove",true) == false)
-      return _error->Error(("Packages need to be removed but remove is disabled."));
-
    pkgRecords Recs(Cache);
+
    if (_error->PendingError() == true)
       return false;
 
@@ -321,13 +318,35 @@ static void eval_profiles(inapt_block *block, std::set<std::string> *defines) {
     }
 }
 
-static void exec_actions(std::vector<inapt_package *> *final_actions, int autoremove) {
+static void dump_nondownloadable(pkgCacheFile &cache) {
+    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
+       if (i.CurrentVer() && !i.CurrentVer().Downloadable())
+           debug("package %s version %s is not downloadable", i.Name(), i.CurrentVer().VerStr());
+}
+
+static void dump_actions(pkgCacheFile &cache) {
+    debug("inst %lu del %lu keep %lu broken %lu bad %lu",
+		    cache->InstCount(), cache->DelCount(), cache->KeepCount(),
+		    cache->BrokenCount(), cache->BadCount());
+    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
+       if (cache[i].Install())
+         debug("installing %s", i.Name());
+       if (cache[i].Delete())
+         debug("removing %s", i.Name());
+       if (cache[i].InstBroken())
+         debug("install broken %s", i.Name());
+       if (cache[i].NowBroken())
+         debug("now broken %s", i.Name());
+    }
+}
+
+static void exec_actions(std::vector<inapt_package *> *final_actions) {
     int marked = 0;
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
 
-     _config->Set("Debug::pkgProblemResolver", true);
+//     _config->Set("Debug::pkgProblemResolver", true);
 //     _config->Set("Debug::pkgAutoRemove", true);
 
     OpTextProgress prog;
@@ -337,9 +356,6 @@ static void exec_actions(std::vector<inapt_package *> *final_actions, int autore
 	_error->DumpErrors();
         exit(1);
     }
-
-    pkgCache *cache = cachef;
-    pkgDepCache *DCache = cachef;
 
     pkgDepCache::ActionGroup group (*cachef);
 
@@ -351,8 +367,8 @@ static void exec_actions(std::vector<inapt_package *> *final_actions, int autore
         switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if (!k.CurrentVer() || cachef[k].Delete()) {
-                    printf("preinstall %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    DCache->MarkInstall(k, true);
+                    debug("install %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
+                    cachef->MarkInstall(k, true);
                 }
                 break;
             case inapt_action::REMOVE:
@@ -367,8 +383,8 @@ static void exec_actions(std::vector<inapt_package *> *final_actions, int autore
         switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if ((!k.CurrentVer() && !cachef[k].Install()) || cachef[k].Delete()) {
-                    printf("install %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    DCache->MarkInstall(k, false);
+                    debug("install %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
+                    cachef->MarkInstall(k, false);
                 }
                 if (cachef[k].Flags & pkgCache::Flag::Auto) {
                     marked++;
@@ -378,8 +394,8 @@ static void exec_actions(std::vector<inapt_package *> *final_actions, int autore
                 break;
             case inapt_action::REMOVE:
                 if ((k.CurrentVer() && !cachef[k].Delete()) || cachef[k].Install()) {
-                    printf("remove %s %s:%d\n", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
-                    DCache->MarkDelete(k, false);
+                    debug("remove %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
+                    cachef->MarkDelete(k, false);
                 }
                 break;
             default:
@@ -387,60 +403,25 @@ static void exec_actions(std::vector<inapt_package *> *final_actions, int autore
         }
     }
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "nondownloadable packages:\n");
-    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
-       if (i.CurrentVer() && !i.CurrentVer().Downloadable()) {
-	       fprintf(stderr, "%s ", i.Name());
-	       fprintf(stderr, "%s\n", DCache->GetCandidateVer(i).VerStr());
-       }
-    }
+    dump_nondownloadable(cachef);
+    dump_actions(cachef);
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "inst %lu del %lu keep %lu broken %lu bad %lu\n",
-		    DCache->InstCount(), DCache->DelCount(), DCache->KeepCount(),
-		    DCache->BrokenCount(), DCache->BadCount());
-
-    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
-       if ((*DCache)[i].Install())
-         fprintf(stderr, "inst %s\n", i.Name());
-       if ((*DCache)[i].InstBroken())
-         fprintf(stderr, "instbroken %s\n", i.Name());
-       if ((*DCache)[i].NowBroken())
-         fprintf(stderr, "nowbroken %s\n", i.Name());
-    }
-
-    fprintf(stderr, "\n");
-
-    pkgProblemResolver fix (DCache);
-
+    pkgProblemResolver fix (cachef);
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
         fix.Protect((*i)->pkg);
     fix.Resolve();
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "inst %lu del %lu keep %lu broken %lu bad %lu\n",
-		    DCache->InstCount(), DCache->DelCount(), DCache->KeepCount(),
-		    DCache->BrokenCount(), DCache->BadCount());
-    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
-       if ((*DCache)[i].Install())
-         fprintf(stderr, "inst %s\n", i.Name());
-       if ((*DCache)[i].Delete())
-         fprintf(stderr, "del %s\n", i.Name());
-       if ((*DCache)[i].InstBroken())
-         fprintf(stderr, "instbroken %s\n", i.Name());
-       if ((*DCache)[i].NowBroken())
-         fprintf(stderr, "nowbroken %s\n", i.Name());
-    }
+    dump_actions(cachef);
 
-    fprintf(stderr, "\n");
-
-    if (autoremove) {
-        DCache->MarkAndSweep();
+    if (_config->FindB("Inapt::AutomaticRemove", false)) {
+        cachef->MarkAndSweep();
         run_autoremove(cachef);
     }
 
-    run_install(cachef);
+    if (!run_install(cachef)) {
+	_error->DumpErrors();
+        fatal("errors");
+    }
 
     if (marked) {
         debug("marked %d packages, writing state file", marked);
@@ -453,20 +434,20 @@ static void exec_actions(std::vector<inapt_package *> *final_actions, int autore
 
     AwesomeRootSetFunc root (final_actions);
 
-    DCache->MarkAndSweep(root);
+    cachef->MarkAndSweep(root);
     fprintf(stderr, "\n");
     fprintf(stderr, "garbage packages:\n");
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
        if (i.CurrentVer() && cachef[i].Garbage) {
 	       fprintf(stderr, "%s ", i.Name());
-	       fprintf(stderr, "%s\n", DCache->GetCandidateVer(i).VerStr());
+	       fprintf(stderr, "%s\n", cachef->GetCandidateVer(i).VerStr());
        }
     }
     */
 }
 
 static void debug_profiles(std::set<std::string> *defines) {
-    fprintf(stderr, "defines: ");
+    fprintf(stderr, "debug: defines: ");
     for (std::set<std::string>::iterator i = defines->begin(); i != defines->end(); i++)
         fprintf(stderr, "%s ", i->c_str());
     fprintf(stderr, "\n");
@@ -481,12 +462,11 @@ static void auto_profiles(std::set<std::string> *defines) {
 
 int main(int argc, char *argv[]) {
     int opt;
-    int autoremove = 0;
 
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:z", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
@@ -495,7 +475,13 @@ int main(int argc, char *argv[]) {
                 usage();
                 break;
             case 'z':
-                autoremove = 1;
+                _config->Set("Inapt::AutomaticRemove", true);
+                break;
+            case 's':
+                _config->Set("Inapt::Simulate", true);
+                break;
+            case 'u':
+                _config->Set("Inapt::Purge", true);
                 break;
             default:
                 fatal("error parsing arguments");
@@ -517,5 +503,12 @@ int main(int argc, char *argv[]) {
     eval_profiles(&context, &defines);
     debug_profiles(&defines);
     eval_block(&context, &defines, &final_actions);
-    exec_actions(&final_actions, autoremove);
+    exec_actions(&final_actions);
+
+    /* TODO: remove this */
+    if (_error->PendingError()) {
+        warn("uncaught errors:");
+	_error->DumpErrors();
+        exit(1);
+    }
 }
