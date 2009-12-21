@@ -236,6 +236,16 @@ static void dump_actions(pkgCacheFile &cache) {
     }
 }
 
+static void show_breakage(pkgCacheFile &cache) {
+    fprintf(stderr, "fatal: Unable to solve dependencies\n");
+    fprintf(stderr, "The following packages are broken:");
+    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
+        if (cache[i].NowBroken() || cache[i].InstBroken())
+            fprintf(stderr, " %s", i.Name());
+    fprintf(stderr, "\n");
+    exit(1);
+}
+
 static void exec_actions(std::vector<inapt_package *> *final_actions) {
     int marked = 0;
     bool purge = _config->FindB("Inapt::Purge", false);
@@ -302,6 +312,9 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
         }
     }
 
+    if (_error->PendingError())
+        return;
+
     dump_nondownloadable(cache);
     dump_actions(cache);
 
@@ -311,10 +324,8 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
             fix.Protect((*i)->pkg);
         fix.Resolve();
 
-       if (_error->PendingError())
-          return;
-
-        dump_actions(cache);
+        if (cache->BrokenCount())
+            show_breakage(cache);
     }
 
     if (_config->FindB("Inapt::AutomaticRemove", false)) {
