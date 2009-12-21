@@ -23,6 +23,7 @@
 char *prog = NULL;
 
 static struct option opts[] = {
+    { "auto-remove", 0, NULL, 'z' },
     { NULL, 0, NULL, '\0' },
 };
 
@@ -191,6 +192,19 @@ bool run_install(pkgCacheFile &Cache,bool ShwKept = false,bool Ask = true,
    }
 }
 
+void run_autoremove(pkgCacheFile &cache)
+{
+    for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
+        if (cache[i].Garbage) {
+            debug("garbage: %s", i.Name());
+            cache->MarkDelete(i, 0);
+        }
+    }
+
+    if (cache->BrokenCount())
+        fatal("ogawd");
+}
+
 static void usage() {
     fprintf(stderr, "Usage: %s [filename..]\n", prog);
     exit(2);
@@ -307,7 +321,7 @@ static void eval_profiles(inapt_block *block, std::set<std::string> *defines) {
     }
 }
 
-static void exec_actions(std::vector<inapt_package *> *final_actions) {
+static void exec_actions(std::vector<inapt_package *> *final_actions, int autoremove) {
     int marked = 0;
 
     pkgInitConfig(*_config);
@@ -421,6 +435,11 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 
     fprintf(stderr, "\n");
 
+    if (autoremove) {
+        DCache->MarkAndSweep();
+        run_autoremove(cachef);
+    }
+
     run_install(cachef);
 
     if (marked) {
@@ -428,6 +447,7 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
         cachef->writeStateFile(NULL);
     }
 
+    /*
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
         cachef->MarkAuto(i, true);
 
@@ -442,6 +462,7 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 	       fprintf(stderr, "%s\n", DCache->GetCandidateVer(i).VerStr());
        }
     }
+    */
 }
 
 static void debug_profiles(std::set<std::string> *defines) {
@@ -460,17 +481,21 @@ static void auto_profiles(std::set<std::string> *defines) {
 
 int main(int argc, char *argv[]) {
     int opt;
+    int autoremove = 0;
 
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:z", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
                 break;
             case '?':
                 usage();
+                break;
+            case 'z':
+                autoremove = 1;
                 break;
             default:
                 fatal("error parsing arguments");
@@ -492,5 +517,5 @@ int main(int argc, char *argv[]) {
     eval_profiles(&context, &defines);
     debug_profiles(&defines);
     eval_block(&context, &defines, &final_actions);
-    exec_actions(&final_actions);
+    exec_actions(&final_actions, autoremove);
 }
