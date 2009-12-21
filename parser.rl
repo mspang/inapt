@@ -79,7 +79,7 @@ using namespace std;
 
     action start_conditional {
         inapt_conditional *cond = new inapt_conditional;
-        cond->condition = xstrndup(ts, p - ts); ts = 0;
+        cond->predicates.swap(predicates);
         conditional_stack.push_back(cond);
     }
 
@@ -119,10 +119,9 @@ using namespace std;
     cmd_install = ('install' @start_install package_list ';');
     cmd_remove = ('remove' @start_remove package_list ';');
     cmd_profiles = ('profiles' profile_list ';' @add_profiles);
-    start_block = '{' @start_block;
     end_block = '}' @end_block;
-    cmd_if = 'if' whitespace+ profile >strstart %start_conditional whitespace* start_block whitespace*
-             ('else' whitespace* start_block whitespace* ';' @full_conditional | ';' @half_conditional);
+    cmd_if = 'if' whitespace+ predicate+ '{' @start_conditional @start_block whitespace*
+             ('else' whitespace* '{' @start_block whitespace* ';' @full_conditional | ';' @half_conditional);
     cmd = whitespace* (predicate* (cmd_install | cmd_remove | cmd_profiles) | cmd_if);
     cmd_list = cmd* whitespace* end_block?;
     main := cmd_list;

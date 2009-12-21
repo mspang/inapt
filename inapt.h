@@ -31,7 +31,7 @@ struct inapt_block {
 };
 
 struct inapt_conditional {
-    const char *condition;
+    std::vector<std::string> predicates;
     struct inapt_block *then_block;
     struct inapt_block *else_block;
 };

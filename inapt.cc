@@ -189,7 +189,7 @@ static void eval_block(inapt_block *block, std::set<std::string> *defines, std::
             eval_action(*i, defines, final_actions);
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (test_macro((*i)->condition, defines))
+        if (test_macros(&(*i)->predicates, defines))
             eval_block((*i)->then_block, defines, final_actions);
         else
             eval_block((*i)->else_block, defines, final_actions);
@@ -206,7 +206,7 @@ static void eval_profiles(inapt_block *block, std::set<std::string> *defines) {
                 defines->insert(*j);
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (test_macro((*i)->condition, defines))
+        if (test_macros(&(*i)->predicates, defines))
             eval_profiles((*i)->then_block, defines);
         else
             eval_profiles((*i)->else_block, defines);
