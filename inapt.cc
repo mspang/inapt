@@ -105,9 +105,9 @@ static void usage() {
     exit(2);
 }
 
-static bool test_macro(const char *macro, std::set<std::string> *defines) {
-    return (*macro != '!' && defines->find(macro) != defines->end())
-            || (*macro == '!' && defines->find(macro + 1) == defines->end());
+static bool test_profile(const char *profile, std::set<std::string> *defines) {
+    return (*profile != '!' && defines->find(profile) != defines->end())
+            || (*profile == '!' && defines->find(profile + 1) == defines->end());
 }
 
 static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cache) {
@@ -162,10 +162,10 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
     return pkg;
 }
 
-static bool test_macros(vector<std::string> *macros, std::set<std::string> *defines) {
+static bool test_profiles(vector<std::string> *profiles, std::set<std::string> *defines) {
     bool ok = true;
-    for (vector<std::string>::iterator j = macros->begin(); j < macros->end(); j++) {
-        if (!test_macro((*j).c_str(), defines)) {
+    for (vector<std::string>::iterator j = profiles->begin(); j < profiles->end(); j++) {
+        if (!test_profile((*j).c_str(), defines)) {
             ok = false;
             break;
         }
@@ -175,7 +175,7 @@ static bool test_macros(vector<std::string> *macros, std::set<std::string> *defi
 
 static void eval_action(inapt_action *action, std::set<std::string> *defines, std::vector<inapt_package *> *final_actions) {
     for (vector<inapt_package *>::iterator i = action->packages.begin(); i < action->packages.end(); i++) {
-        if (test_macros(&(*i)->predicates, defines))
+        if (test_profiles(&(*i)->predicates, defines))
             final_actions->push_back(*i);
     }
 }
@@ -185,11 +185,11 @@ static void eval_block(inapt_block *block, std::set<std::string> *defines, std::
         return;
 
     for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++)
-        if (test_macros(&(*i)->predicates, defines))
+        if (test_profiles(&(*i)->predicates, defines))
             eval_action(*i, defines, final_actions);
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (test_macros(&(*i)->predicates, defines))
+        if (test_profiles(&(*i)->predicates, defines))
             eval_block((*i)->then_block, defines, final_actions);
         else
             eval_block((*i)->else_block, defines, final_actions);
@@ -201,12 +201,12 @@ static void eval_profiles(inapt_block *block, std::set<std::string> *defines) {
         return;
 
     for (vector<inapt_profiles *>::iterator i = block->profiles.begin(); i < block->profiles.end(); i++)
-        if (test_macros(&(*i)->predicates, defines))
+        if (test_profiles(&(*i)->predicates, defines))
             for (vector<std::string>::iterator j = (*i)->profiles.begin(); j != (*i)->profiles.end(); j++)
                 defines->insert(*j);
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (test_macros(&(*i)->predicates, defines))
+        if (test_profiles(&(*i)->predicates, defines))
             eval_profiles((*i)->then_block, defines);
         else
             eval_profiles((*i)->else_block, defines);
