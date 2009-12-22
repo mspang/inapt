@@ -23,7 +23,7 @@
 char *prog = NULL;
 
 static struct option opts[] = {
-    { "auto-remove", 0, NULL, 'z' },
+    { "auto-remove", 0, NULL, 'g' },
     { "simulate", 0, NULL, 's' },
     { "purge", 0, NULL, 'u' },
     { NULL, 0, NULL, '\0' },
@@ -48,7 +48,7 @@ bool run_install(pkgCacheFile &cache) {
    FileFd Lock;
    Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
    if (_error->PendingError())
-       return _error->Error(("Unable to lock the download directory"));
+       return _error->Error("Unable to lock the download directory");
 
    unsigned int width = 80;
    AcqTextStatus status (width, 0);
@@ -56,9 +56,9 @@ bool run_install(pkgCacheFile &cache) {
 
    pkgSourceList List;
    if (List.ReadMainList() == false)
-      return _error->Error(("The list of sources could not be read."));
+      return _error->Error("The list of sources could not be read");
 
-   SPtr<pkgPackageManager> PM= _system->CreatePM(cache);
+   SPtr<pkgPackageManager> PM = _system->CreatePM(cache);
    if (PM->GetArchives(&Fetcher, &List, &Recs) == false ||
        _error->PendingError())
       return false;
@@ -67,11 +67,10 @@ bool run_install(pkgCacheFile &cache) {
      return false;
 
   bool Failed = false;
-  for (pkgAcquire::ItemIterator I = Fetcher.ItemsBegin(); I != Fetcher.ItemsEnd(); I++)
-  {
-     if ((*I)->Status != pkgAcquire::Item::StatDone || (*I)->Complete != true) {
-         fprintf(stderr,("Failed to fetch %s  %s\n"),(*I)->DescURI().c_str(),
-                 (*I)->ErrorText.c_str());
+  for (pkgAcquire::ItemIterator i = Fetcher.ItemsBegin(); i != Fetcher.ItemsEnd(); i++) {
+     if ((*i)->Status != pkgAcquire::Item::StatDone || (*i)->Complete != true) {
+         fprintf(stderr,("Failed to fetch %s  %s\n"),(*i)->DescURI().c_str(),
+                 (*i)->ErrorText.c_str());
          Failed = true;
      }
   }
@@ -88,8 +87,7 @@ bool run_install(pkgCacheFile &cache) {
   return false;
 }
 
-void run_autoremove(pkgCacheFile &cache)
-{
+void run_autoremove(pkgCacheFile &cache) {
     bool purge = _config->FindB("Inapt::Purge", false);
 
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
@@ -287,14 +285,16 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
                     cache->MarkInstall(k, false);
                 }
                 if (cache[k].Flags & pkgCache::Flag::Auto) {
-                    marked++;
                     debug("marking %s as manually installed", (*i)->pkg.Name());
                     cache->MarkAuto(k, false);
+                    marked++;
                 }
                 break;
             case inapt_action::REMOVE:
                 if ((k.CurrentVer() && !cache[k].Delete()) || cache[k].Install())
                     debug("remove %s %s:%d", (*i)->pkg.Name(), (*i)->filename, (*i)->linenum);
+
+                /* always mark so purge works */
                 cache->MarkDelete(k, purge);
                 break;
             default:
@@ -366,7 +366,7 @@ int main(int argc, char *argv[]) {
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:sd", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:sdg", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
@@ -374,7 +374,7 @@ int main(int argc, char *argv[]) {
             case '?':
                 usage();
                 break;
-            case 'z':
+            case 'g':
                 _config->Set("Inapt::AutomaticRemove", true);
                 break;
             case 's':
