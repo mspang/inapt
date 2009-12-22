@@ -1,12 +1,12 @@
 CPPFLAGS := -g3 -O0 -Wall -Werror
 LDFLAGS  := -Wl,--as-needed
 INCLUDES := $(shell krb5-config --cflags)
-override CFLAGS  += -std=gnu99 $(INCLUDES)
+override CFLAGS += -std=gnu99 $(INCLUDES)
 
 all: inapt
 
-inapt: inapt.o parser.o acqprogress.o util.o
-	g++ -o inapt -g3 -Wall -Werror -lapt-pkg -lapt-inst $^
+inapt: inapt.o parser.o contrib/acqprogress.o util.o
+	g++ -o inapt -g3 -Wall -Werror -lapt-pkg $^
 
 inapt.o: inapt.h
 
@@ -21,4 +21,3 @@ parser.png: parser.dot
 
 clean:
 	rm -f *.o inapt parser.png parser.dot parser.cc
-

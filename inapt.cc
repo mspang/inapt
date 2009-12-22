@@ -18,7 +18,7 @@
 
 #include "inapt.h"
 #include "util.h"
-#include "acqprogress.h"
+#include "contrib/acqprogress.h"
 
 char *prog = NULL;
 

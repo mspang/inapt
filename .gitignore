@@ -2,7 +2,7 @@
 *.aux
 *.log
 *.pdf
-inapt
+/inapt
 /parser.cc
 /parser.dot
 /parser.png

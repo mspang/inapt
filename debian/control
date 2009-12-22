@@ -1,0 +1,17 @@
+Source: inapt
+Section: admin
+Priority: optional
+Maintainer: Michael Spang <mspang@csclub.uwaterloo.ca>
+Build-Depends: debhelper (>= 7), libapt-pkg-dev, ragel
+Standards-Version: 3.8.3
+
+Package: inapt
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: manages installed packages with a configuration file
+ Inapt is a frontent to APT that installs and removes packages
+ according to a configuration file. This is useful primarily if a
+ similar set of packages must be installed on a large number of
+ machines. The configuration file syntax allows for packages to be
+ installed conditionally upon a set of profiles assigned to each
+ machine.
