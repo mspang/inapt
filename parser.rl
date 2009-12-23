@@ -65,7 +65,7 @@ using namespace std;
             block_stack.push_back(tmp_block);
             fcall main;
         } else {
-            fatal("%s: %d: Syntax Error: Nesting Too Deep at '}'", curfile, curline);
+            fatal("%s: %d: Syntax Error: Nesting Too Deep at '{'", curfile, curline);
         }
     }
 
