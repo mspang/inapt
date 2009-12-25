@@ -477,4 +477,6 @@ int main(int argc, char *argv[]) {
 	_error->DumpErrors();
         exit(1);
     }
+
+    return 0;
 }
