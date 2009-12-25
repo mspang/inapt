@@ -1,7 +1,5 @@
 CPPFLAGS := -g3 -O0 -Wall -Werror
 LDFLAGS  := -Wl,--as-needed
-INCLUDES := $(shell krb5-config --cflags)
-override CFLAGS += -std=gnu99 $(INCLUDES)
 
 all: inapt
 
