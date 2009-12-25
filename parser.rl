@@ -129,7 +129,7 @@ using namespace std;
 
 %% write data;
 
-void badsyntax(const char *filename, int lineno, char badchar, const char *message) {
+static void badsyntax(const char *filename, int lineno, char badchar, const char *message) {
     if (!message) {
         if (badchar == '\n')
             message = "Unexpected newline";

@@ -28,7 +28,7 @@ static struct option opts[] = {
     { NULL, 0, NULL, '\0' },
 };
 
-bool run_install(pkgCacheFile &cache) {
+static bool run_install(pkgCacheFile &cache) {
    if (_config->FindB("Inapt::Purge", false))
       for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++)
          if (!i.Purge() && cache[i].Mode == pkgDepCache::ModeDelete)
@@ -83,7 +83,7 @@ bool run_install(pkgCacheFile &cache) {
   return false;
 }
 
-void run_autoremove(pkgCacheFile &cache) {
+static void run_autoremove(pkgCacheFile &cache) {
     bool purge = _config->FindB("Inapt::Purge", false);
 
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
