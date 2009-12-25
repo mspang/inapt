@@ -261,7 +261,6 @@ static bool sanity_check(std::vector<inapt_package *> *final_actions, pkgCacheFi
             inapt_package *current = *i;
             _error->Error("Multiple directives for package %s at %s:%d and %s:%d",
                     (*i)->pkg.Name(), first->filename, first->linenum, current->filename, current->linenum);
-            debug("foo %s", (*i)->pkg.Name());
             okay = false;
             continue;
         }
