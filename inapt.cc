@@ -23,6 +23,7 @@
 char *prog = NULL;
 
 static struct option opts[] = {
+    { "help", 0, NULL, 'h' },
     { "simulate", 0, NULL, 's' },
     { "purge", 0, NULL, 'u' },
     { NULL, 0, NULL, '\0' },
@@ -430,12 +431,13 @@ int main(int argc, char *argv[]) {
     std::set<std::string> defines;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:o:sd", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:o:sdh", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 defines.insert(optarg);
                 break;
             case '?':
+            case 'h':
                 usage();
                 break;
             case 's':
