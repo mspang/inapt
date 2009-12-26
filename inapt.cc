@@ -26,6 +26,7 @@ static struct option opts[] = {
     { "help", 0, NULL, 'h' },
     { "simulate", 0, NULL, 's' },
     { "purge", 0, NULL, 'u' },
+    { "option", 0, NULL, 'o' },
     { NULL, 0, NULL, '\0' },
 };
 
