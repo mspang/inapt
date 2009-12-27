@@ -1,0 +1,155 @@
+.TH INAPT 8 "December 26, 2009"
+.SH NAME
+inapt \- manages installed packages with a configuration file
+.SH SYNOPSIS
+.B inapt
+.RI [ options ] " files" ...
+.SH DESCRIPTION
+Inapt is a frontend to APT that installs and removes packages
+according to a configuration file. This is useful primarily if a
+similar set of packages must be installed on a large number of
+machines. It is also allows the installed packages to be version
+controlled. The configuration file syntax allows for packages to be
+installed conditionally upon a set of profiles assigned to each
+machine.
+
+The input language for Inapt is declarative, so that if all desired
+packages are already installed then Inapt will take no action. This
+makes Inapt suitable for running regularly to inspect the system
+configuration and make sure nothing is amiss. A usual approach would
+be to run Inapt in a nightly cron job.
+
+In addition to installing and removing packages, Inapt can perform
+administrative tasks such as updating the APT package lists, applying
+security updates, removing automatically-installed and no longer
+needed shared libraries, and cleaning the package cache.
+
+.SH OPTIONS
+.TP
+.B \-h, \-?, \-\-help
+Display a usage message.
+.TP
+.B \-p, \-\-profile \fIprofile_name\fR
+Display a usage message.
+.TP
+.B \-d
+Enable debugging output.
+.TP
+.B \-s, \-\-simulate
+No action; perform a simulation of events that would occur but do not actually change the system.
+.TP
+.B \-u, \-\-purge
+Use purge instead of remove for anything that would be removed.
+.TP
+.B \-o, \-\-option \fIconfig_string\fR
+Set a Configuration Option; This will set an arbitrary configuration option. The syntax is -o Foo::Bar=bar.  -o and --option can be used
+multiple times to set different options.
+
+.SH PROFILES
+To allow the same configuration file to be used on many machines,
+Inapt supports profiles. A profile is any string, such as "laptop",
+"desktop", "web-server", or "firewall". Packages can be installed only
+if certain profiles are selected.
+
+You can select profiles using the --profile option on the command
+line. Inapt will also automatically select the profile corresponding
+to the hostname of the current machine. Finally, profiles can be
+selected in the configuration file itself.
+
+.SH INPUT
+Inapt takes as input a sequence of directives. The order of directives
+is not significant; all orderings have the same effect. It is an error
+if directives conflict. Whitespace is also not significant, and each
+line may be terminated by a Bourne shell style comment. Each directive
+must be terminated by a semicolon.
+
+.SH DIRECTIVES
+The following directives are accepted by Inapt:
+.TP
+.B \fIconditional_expr\fR? \fBinstall\fR \fIpackage_list\fR;
+Selects one or more packages to install. Inapt will not reinstall
+packages that are already installed. If a conditional expression
+precedes this command, the directive will be skipped if the
+expression if false.
+.TP
+.B \fIconditional_expr\fR? \fBremove\fR \fIpackage_list\fR;
+Selects one or more packages to remove. If a conditional expression
+precedes this command, the directive will be skipped if the
+expression if false.
+.TP
+.B \fIconditional_expr\fR? \fBprofiles\fR \fIprofile_name\fR \fIprofile_name\fR ...;
+Selects one or more profiles. This is equivalent to passing the
+--profile command line option for each named profile. If a conditional
+expression precedes this command, the directive will be skipped if
+the expression if false.
+.TP
+.B if \fIconditional_expr\fR { ... } else { ... };
+The directives in the first block will be performed if the expression
+is true. Otherwise, the directives in the second
+block will be performed.
+.TP
+.B if \fIconditional_expr\fR { ... };
+This is like the previous directive, except nothing is performed if
+the expression is false.
+
+.SH CONDITIONALS
+A conditional expression may take any of the following forms:
+.TP
+.B @\fIprofile\fR
+This expression is true if the named profile is selected and
+false otherwise.
+.LP
+However, the syntax allows for more complicated
+expressions, as follows:
+.TP
+.B @\fI!profile\fR
+This expression is true if the named profile is not selected.
+.TP
+.B @\fIprofile\fR @\fIprofile\fR ...
+This expression is true if all of named profiles are selected.
+.TP
+.B @\fIprofile/\fIprofile\fR...
+This expression is true if any of named profiles are selected.
+.TP
+.B @\fIprofileA\fR/\fIprofileB\fR @\fIprofileC\fR/\fI!profileD\fR
+This expression is true if at least one of profileA or profileB
+is selected, and also either profileC is selected or profileD is not
+selected.
+.LP
+In general, any conjunction of disjunctions of profiles or negated profiles may
+specified using this syntax.
+
+.SH PACKAGE LISTS
+A package list is a whitespace separated list of package names.
+Each package may be optionally preceded by a conditional expression.
+If preceded by a conditional expression, a package is included in
+the list only if the expression is true.
+
+.SH EXAMPLES
+.TP
+install gcc g++ ragel;
+Install some development tools.
+.TP
+remove bsdgames nethack-common gnome-games;
+Remove some games.
+.TP
+@web-server install apache2-mpm-worker libapache2-mod-fcgid;
+Install the Apache HTTP daemon and related modules, but only on the web server.
+.TP
+@!X remove xserver-xorg;
+Remove the X server, but only on machines that are not supposed to have X.
+.TP
+profiles core;
+Always select the core profile.
+.TP
+@workstation profiles development;
+Select the development profile on all workstations.
+.TP
+install @X emacs22-gtk @!X emacs22-nox;
+Install either emacs22-gtk or emacs22-nox, depending on whether the X profile is selected.
+.SH AUTHOR
+Inapt was written by Michael Spang <mspang@csclub.uwaterloo.ca>.
+.SH "SEE ALSO"
+.BR dpkg (1),
+.BR apt-get (8),
+.BR sources.list (5)
