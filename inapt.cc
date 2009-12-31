@@ -104,22 +104,22 @@ static void usage() {
     exit(2);
 }
 
-static bool test_profile(const char *profile, std::set<std::string> *defines) {
-    return (*profile != '!' && defines->find(profile) != defines->end())
-            || (*profile == '!' && defines->find(profile + 1) == defines->end());
+static bool test_profile(const char *profile, std::set<std::string> *profiles) {
+    return (*profile != '!' && profiles->find(profile) != profiles->end())
+            || (*profile == '!' && profiles->find(profile + 1) == profiles->end());
 }
 
-static bool test_anyprofile(std::string &profile, std::set<std::string> *defines) {
+static bool test_anyprofile(std::string &profile, std::set<std::string> *profiles) {
     char *s = xstrdup(profile.c_str());
     const char *c = strtok(s, "/");
 
-    if (test_profile(c, defines)) {
+    if (test_profile(c, profiles)) {
         free(s);
         return true;
     }
 
     while ((c = strtok(NULL, "/")) != NULL) {
-        if (test_profile(c, defines)) {
+        if (test_profile(c, profiles)) {
             free(s);
             return true;
         }
@@ -180,10 +180,10 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
     return pkg;
 }
 
-static bool test_profiles(vector<std::string> *profiles, std::set<std::string> *defines) {
+static bool test_profiles(vector<std::string> *test_profiles, std::set<std::string> *profiles) {
     bool ok = true;
-    for (vector<std::string>::iterator j = profiles->begin(); j < profiles->end(); j++) {
-        if (!test_anyprofile(*j, defines)) {
+    for (vector<std::string>::iterator j = test_profiles->begin(); j < test_profiles->end(); j++) {
+        if (!test_anyprofile(*j, profiles)) {
             ok = false;
             break;
         }
@@ -191,43 +191,43 @@ static bool test_profiles(vector<std::string> *profiles, std::set<std::string> *
     return ok;
 }
 
-static void eval_action(inapt_action *action, std::set<std::string> *defines, std::vector<inapt_package *> *final_actions) {
+static void eval_action(inapt_action *action, std::set<std::string> *profiles, std::vector<inapt_package *> *final_actions) {
     for (vector<inapt_package *>::iterator i = action->packages.begin(); i < action->packages.end(); i++) {
-        if (test_profiles(&(*i)->predicates, defines))
+        if (test_profiles(&(*i)->predicates, profiles))
             final_actions->push_back(*i);
     }
 }
 
-static void eval_block(inapt_block *block, std::set<std::string> *defines, std::vector<inapt_package *> *final_actions) {
+static void eval_block(inapt_block *block, std::set<std::string> *profiles, std::vector<inapt_package *> *final_actions) {
     if (!block)
         return;
 
     for (vector<inapt_action *>::iterator i = block->actions.begin(); i < block->actions.end(); i++)
-        if (test_profiles(&(*i)->predicates, defines))
-            eval_action(*i, defines, final_actions);
+        if (test_profiles(&(*i)->predicates, profiles))
+            eval_action(*i, profiles, final_actions);
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (test_profiles(&(*i)->predicates, defines))
-            eval_block((*i)->then_block, defines, final_actions);
+        if (test_profiles(&(*i)->predicates, profiles))
+            eval_block((*i)->then_block, profiles, final_actions);
         else
-            eval_block((*i)->else_block, defines, final_actions);
+            eval_block((*i)->else_block, profiles, final_actions);
     }
 }
 
-static void eval_profiles(inapt_block *block, std::set<std::string> *defines) {
+static void eval_profiles(inapt_block *block, std::set<std::string> *profiles) {
     if (!block)
         return;
 
     for (vector<inapt_profiles *>::iterator i = block->profiles.begin(); i < block->profiles.end(); i++)
-        if (test_profiles(&(*i)->predicates, defines))
+        if (test_profiles(&(*i)->predicates, profiles))
             for (vector<std::string>::iterator j = (*i)->profiles.begin(); j != (*i)->profiles.end(); j++)
-                defines->insert(*j);
+                profiles->insert(*j);
 
     for (vector<inapt_conditional *>::iterator i = block->children.begin(); i < block->children.end(); i++) {
-        if (test_profiles(&(*i)->predicates, defines))
-            eval_profiles((*i)->then_block, defines);
+        if (test_profiles(&(*i)->predicates, profiles))
+            eval_profiles((*i)->then_block, profiles);
         else
-            eval_profiles((*i)->else_block, defines);
+            eval_profiles((*i)->else_block, profiles);
     }
 }
 
@@ -397,22 +397,22 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     }
 }
 
-static void debug_profiles(std::set<std::string> *defines) {
-    std::string profiles = "profiles:";
+static void debug_profiles(std::set<std::string> *profiles) {
+    std::string s = "profiles:";
 
-    for (std::set<std::string>::iterator i = defines->begin(); i != defines->end(); i++) {
-        profiles.append(" ");
-        profiles.append(*i);
+    for (std::set<std::string>::iterator i = profiles->begin(); i != profiles->end(); i++) {
+        s.append(" ");
+        s.append(*i);
     }
 
-    debug("%s", profiles.c_str());
+    debug("%s", s.c_str());
 }
 
-static void auto_profiles(std::set<std::string> *defines) {
+static void auto_profiles(std::set<std::string> *profiles) {
     struct utsname uts;
     if (uname(&uts))
         fatalpe("uname");
-    defines->insert(uts.nodename);
+    profiles->insert(uts.nodename);
 }
 
 static void set_option(char *opt) {
@@ -429,13 +429,13 @@ static void set_option(char *opt) {
 int main(int argc, char *argv[]) {
     int opt;
 
-    std::set<std::string> defines;
+    std::set<std::string> profiles;
 
     prog = xstrdup(basename(argv[0]));
     while ((opt = getopt_long(argc, argv, "p:o:sdh", opts, NULL)) != -1) {
         switch (opt) {
             case 'p':
-                defines.insert(optarg);
+                profiles.insert(optarg);
                 break;
             case '?':
             case 'h':
@@ -469,10 +469,10 @@ int main(int argc, char *argv[]) {
     while (num_files--)
         parser(argv[optind++], &context);
 
-    auto_profiles(&defines);
-    eval_profiles(&context, &defines);
-    debug_profiles(&defines);
-    eval_block(&context, &defines, &final_actions);
+    auto_profiles(&profiles);
+    eval_profiles(&context, &profiles);
+    debug_profiles(&profiles);
+    eval_block(&context, &profiles, &final_actions);
     exec_actions(&final_actions);
 
     if (_error->PendingError()) {
