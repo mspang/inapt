@@ -244,8 +244,8 @@ static void dump_nondownloadable(pkgCacheFile &cache) {
 
 static void dump_actions(pkgCacheFile &cache) {
     debug("inst %lu del %lu keep %lu broken %lu bad %lu",
-		    cache->InstCount(), cache->DelCount(), cache->KeepCount(),
-		    cache->BrokenCount(), cache->BadCount());
+            cache->InstCount(), cache->DelCount(), cache->KeepCount(),
+            cache->BrokenCount(), cache->BadCount());
     for (pkgCache::PkgIterator i = cache->PkgBegin(); !i.end(); i++) {
        if (cache[i].Install())
          debug("installing %s", i.Name());
@@ -493,7 +493,7 @@ int main(int argc, char *argv[]) {
     exec_actions(&final_actions);
 
     if (_error->PendingError()) {
-	_error->DumpErrors();
+        _error->DumpErrors();
         exit(1);
     }
 
