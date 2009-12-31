@@ -32,18 +32,30 @@ Display a usage message.
 .B \-p, \-\-profile \fIprofile_name\fR
 Display a usage message.
 .TP
-.B \-d
-Enable debugging output.
+.B \-l, \-\-update
+Update the package listings.
+.TP
+.B \-u, \-\-upgrade
+Upgrade packages.
+.TP
+.B \-e, \-\-clean
+Clean the package cache.
+.TP
+.B \-c, \-\-check
+No action; check to see if the configuration is correct.
 .TP
 .B \-s, \-\-simulate
-No action; perform a simulation of events that would occur but do not actually change the system.
+No action; perform a simulation of events that would occur.
 .TP
-.B \-u, \-\-purge
+.B \-\-purge
 Use purge instead of remove for anything that would be removed.
 .TP
 .B \-o, \-\-option \fIconfig_string\fR
 Set a Configuration Option; This will set an arbitrary configuration option. The syntax is -o Foo::Bar=bar.  -o and --option can be used
 multiple times to set different options.
+.TP
+.B \-d
+Enable debugging output.
 
 .SH PROFILES
 To allow the same configuration file to be used on many machines,

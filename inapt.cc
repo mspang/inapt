@@ -25,7 +25,12 @@ char *prog = NULL;
 static struct option opts[] = {
     { "help", 0, NULL, 'h' },
     { "simulate", 0, NULL, 's' },
-    { "purge", 0, NULL, 'u' },
+    { "profile", 0, NULL, 'p' },
+    { "update", 0, NULL, 'l' },
+    { "upgrade", 0, NULL, 'u' },
+    { "check", 0, NULL, 'c' },
+    { "purge", 0, NULL, '!' },
+    { "clean", 0, NULL, 'e' },
     { "option", 0, NULL, 'o' },
     { NULL, 0, NULL, '\0' },
 };
@@ -432,20 +437,32 @@ int main(int argc, char *argv[]) {
     std::set<std::string> profiles;
 
     prog = xstrdup(basename(argv[0]));
-    while ((opt = getopt_long(argc, argv, "p:o:sdh", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "?hp:slucedo:", opts, NULL)) != -1) {
         switch (opt) {
-            case 'p':
-                profiles.insert(optarg);
-                break;
             case '?':
             case 'h':
                 usage();
                 break;
+            case 'p':
+                profiles.insert(optarg);
+                break;
             case 's':
                 _config->Set("Inapt::Simulate", true);
                 break;
-            case 'u':
+            case '!':
                 _config->Set("Inapt::Purge", true);
+                break;
+            case 'l':
+                _config->Set("Inapt::Update", true);
+                break;
+            case 'u':
+                _config->Set("Inapt::Upgrade", true);
+                break;
+            case 'c':
+                _config->Set("Inapt::Check", true);
+                break;
+            case 'e':
+                _config->Set("Inapt::Clean", true);
                 break;
             case 'd':
                 debug_level++;
