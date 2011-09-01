@@ -1,3 +1,10 @@
+inapt (1.0) unstable; urgency=low
+
+  * Remove some unimplemented features from the manual.
+  * Thus, we are feature complete. Bump to 1.0.
+
+ -- Michael Spang <mspang@csclub.uwaterloo.ca>  Thu, 01 Sep 2011 19:37:42 -0400
+
 inapt (0.1) unstable; urgency=low
 
   * Initial Release.

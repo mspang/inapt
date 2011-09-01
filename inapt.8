@@ -19,11 +19,6 @@ makes Inapt suitable for running regularly to inspect the system
 configuration and make sure nothing is amiss. A usual approach would
 be to run Inapt in a nightly cron job.
 
-In addition to installing and removing packages, Inapt can perform
-administrative tasks such as updating the APT package lists, applying
-security updates, removing automatically-installed and no longer
-needed shared libraries, and cleaning the package cache.
-
 .SH OPTIONS
 .TP
 .B \-h, \-?, \-\-help
@@ -32,18 +27,6 @@ Display a usage message.
 .B \-p, \-\-profile \fIprofile_name\fR
 Enable the specified profile.
 .TP
-.B \-l, \-\-update
-Update the package listings.
-.TP
-.B \-u, \-\-upgrade
-Upgrade packages.
-.TP
-.B \-e, \-\-clean
-Clean the package cache.
-.TP
-.B \-c, \-\-check
-No action; check to see if the configuration is correct.
-.TP
 .B \-s, \-\-simulate
 No action; perform a simulation of events that would occur.
 .TP
@@ -51,7 +34,7 @@ No action; perform a simulation of events that would occur.
 Use purge instead of remove for anything that would be removed.
 .TP
 .B \-o, \-\-option \fIconfig_string\fR
-Set a Configuration Option; This will set an arbitrary configuration option. The syntax is -o Foo::Bar=bar.  -o and --option can be used
+Set an APT configuration option; This will set an arbitrary configuration option. The syntax is -o Foo::Bar=bar.  -o and --option can be used
 multiple times to set different options.
 .TP
 .B \-d
