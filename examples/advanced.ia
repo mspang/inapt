@@ -1,0 +1,50 @@
+# This file illustrates how to handle multiple machines in one file
+# using profiles. The profile corresponding to the machine hostname
+# is selected automatically. From there, we select more profiles.
+
+# On the machine named caffeine, install core packages and a web server.
+@caffeine
+profiles core web-server;
+
+# On the machine named ginseng, install core packages and an NFS server.
+@ginseng
+profiles core nfs-server;
+
+# On the machine named strombola, install core and desktop packages.
+@strombola
+profiles core desktop;
+
+# Core packages (installed everywhere)
+if @core {
+
+    # shells
+    install bash zsh dash ksh tcsh csh rc;
+
+    # editors
+    install ed vim nano;
+
+    # terminal tools
+    install ncurses-bin ncurses-term;
+
+   # documentation
+   install manpages info;
+};
+
+# Web server packages (installed on web servers)
+@web-server install apache2-mpm-worker;
+
+# NFS server packages (installed on NFS servers)
+@nfs-server install nfs-kernel-server;
+
+# Desktop packages (installed on desktop machines)
+if @desktop {
+
+   # desktop environments
+   install kde gnome;
+
+   # X server
+   install xserver-xorg;
+
+   # install either openoffice or libreoffice (project name change)
+   install openoffice.org/libreoffice;
+};

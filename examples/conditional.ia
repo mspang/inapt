@@ -1,0 +1,25 @@
+# This file illustrates ways to install or remove packages conditionally.
+
+# On the machine named caffeine only, install the postfix MTA.
+@caffeine
+install postfix;
+
+# On all machines except caffeine, install the ssmtp package.
+@!caffeine
+install ssmtp;
+
+# On machines named either ginseng or staples, install an NFS server
+@ginseng/staples
+install nfs-kernel-server;
+
+# Install gnome, if this script was run as "inapt -p Xorg -p office conditional.ia"
+@office @Xorg install gnome;
+
+# Install games, if this script was run as "inapt -p games conditional.ia"
+if @games {
+  install bsdgames;
+
+  install nethack;
+
+  install crawl;
+};

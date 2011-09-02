@@ -1,0 +1,19 @@
+# To execute this file run: inapt devtools.ia
+
+# essentials
+install build-essential gcc g++;
+
+# debian package development
+install dpkg-dev devscripts debootstrap dupload fakeroot;
+
+# build systems
+install make autoconf automake;
+
+# debugging tools
+install strace gdb elfutils;
+
+# scripting
+install perl python;
+
+# documentation
+install manpages-dev;

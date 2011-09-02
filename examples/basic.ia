@@ -1,0 +1,7 @@
+# To execute this file run: inapt basic.ia
+
+# Install GNU hello
+install hello;
+
+# Remove BSD games
+remove bsdgames;
