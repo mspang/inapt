@@ -32,6 +32,7 @@ static struct option opts[] = {
     { "purge", 0, NULL, '!' },
     { "clean", 0, NULL, 'e' },
     { "option", 0, NULL, 'o' },
+    { "strict", 0, NULL, 't' },
     { NULL, 0, NULL, '\0' },
 };
 
@@ -173,14 +174,20 @@ static pkgCache::PkgIterator eval_pkg(inapt_package *package, pkgCacheFile &cach
 
     if (pkg.end()) {
         if (package->alternates.size() == 1) {
-            _error->Error("%s:%d: No such package: %s", package->filename, package->linenum, package->alternates[0].c_str());
+	    if (_config->FindB("Inapt::Strict", false))
+		    _error->Error("%s:%d: No such package: %s", package->filename, package->linenum, package->alternates[0].c_str());
+	    else
+		    _error->Warning("%s:%d: No such package: %s", package->filename, package->linenum, package->alternates[0].c_str());
         } else {
             std::vector<std::string>::iterator i = package->alternates.begin();
             std::string message = *(i++);
             while (i != package->alternates.end()) {
                 message.append(", ").append(*(i++));
             }
-            _error->Error("%s:%d: No alternative available: %s", package->filename, package->linenum, message.c_str());
+	    if (_config->FindB("Inapt::Strict", false))
+		    _error->Error("%s:%d: No alternative available: %s", package->filename, package->linenum, message.c_str());
+	    else
+		    _error->Warning("%s:%d: No alternative available: %s", package->filename, package->linenum, message.c_str());
         }
     }
 
@@ -265,6 +272,8 @@ static bool sanity_check(std::vector<inapt_package *> *final_actions, pkgCacheFi
     std::map<std::string, inapt_package *> packages;
 
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i != final_actions->end(); i++) {
+	if ((*i)->pkg.end())
+		continue;
         if (packages.find((*i)->pkg.Name()) != packages.end()) {
             inapt_package *first = packages[(*i)->pkg.Name()];
             inapt_package *current = *i;
@@ -315,10 +324,13 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 
     if (_error->PendingError())
         return;
+    _error->DumpErrors();
 
     // preliminary loop (auto-installs, includes recommends - could do this manually)
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator k = (*i)->pkg;
+	if (k.end())
+		continue;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if (!k.CurrentVer() || cache[k].Delete()) {
@@ -336,6 +348,8 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     // secondary loop (removes package and reinstalls auto-removed packages)
     for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
         pkgCache::PkgIterator k = (*i)->pkg;
+	if (k.end())
+		continue;
         switch ((*i)->action) {
             case inapt_action::INSTALL:
                 if ((!k.CurrentVer() && !cache[k].Install()) || cache[k].Delete()) {
@@ -465,6 +479,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'e':
                 _config->Set("Inapt::Clean", true);
+                break;
+            case 't':
+                _config->Set("Inapt::Strict", true);
                 break;
             case 'd':
                 debug_level++;
