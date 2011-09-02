@@ -110,7 +110,7 @@ using namespace std;
     newline = '\n' @newline;
     comment = '#' (any - '\n')* newline;
     whitespace = [\t\v\f\r ] | comment | newline;
-    profile = alpha (alpha | digit | '-' | '+' | '.')*;
+    profile = alpha (alpha | digit | '-' | '_' | '+' | '.')*;
     package_name = ((lower | digit) (lower | digit | '+' | '-' | '.')+) >strstart;
     predicate = '@' ('!'? profile ('/' '!'? profile)*) >strstart %predicate whitespace+;
     package_alternates = package_name >strstart %add_alternate ('/' package_name >strstart %add_alternate)*;
