@@ -210,7 +210,7 @@ void parser(const char *filename, inapt_block *top_block)
     }
 
     if (cs < inapt_first_final)
-        badsyntax(curfile, curline, 0, "Unexpected EOF");
+        badsyntax(curfile, curline, 0, "Unexpected EOF (forgot semicolon?)");
 
     if (top)
         badsyntax(curfile, curline, 0, "Unclosed block at EOF");
