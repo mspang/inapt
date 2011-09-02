@@ -56,9 +56,11 @@ static bool run_install(pkgCacheFile &cache) {
    if (_error->PendingError())
        return _error->Error("Unable to lock the download directory");
 
+   pkgAcquire Fetcher;
+
    unsigned int width = 80;
    AcqTextStatus status (width, 0);
-   pkgAcquire Fetcher (&status);
+   Fetcher.Setup(&status);
 
    pkgSourceList List;
    if (List.ReadMainList() == false)
@@ -303,7 +305,7 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
     OpTextProgress prog;
     pkgCacheFile cache;
 
-    if (cache.Open(prog) == false)
+    if (cache.Open(&prog, true) == false)
         return;
 
     pkgDepCache::ActionGroup group (cache);
