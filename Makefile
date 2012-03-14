@@ -4,7 +4,7 @@ LDFLAGS  := -Wl,--as-needed
 all: inapt
 
 inapt: inapt.o parser.o contrib/acqprogress.o util.o
-	g++ -o inapt -g3 -Wall -Werror -lapt-pkg $^
+	g++ -o inapt -g3 -Wall -Werror $^ -lapt-pkg
 
 inapt.o: inapt.h
 
