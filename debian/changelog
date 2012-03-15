@@ -1,3 +1,9 @@
+inapt (1.0ubuntu1) oneiric; urgency=low
+
+  * Build on Ubuntu oneiric.
+
+ -- Jeremy Roman <jbroman@csclub.uwaterloo.ca>  Wed, 14 Mar 2012 19:21:53 -0400
+
 inapt (1.0) unstable; urgency=low
 
   * Remove some unimplemented features from the manual.
