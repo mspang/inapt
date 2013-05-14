@@ -8,7 +8,6 @@
 #include <set>
 #include <apt-pkg/pkgcache.h>
 #include <apt-pkg/cachefile.h>
-#include <apt-pkg/dpkgdb.h>
 #include <apt-pkg/progress.h>
 #include <apt-pkg/init.h>
 #include <apt-pkg/error.h>

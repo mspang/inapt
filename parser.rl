@@ -179,7 +179,7 @@ void parser(const char *filename, inapt_block *top_block)
     %% write init;
 
     while (!done) {
-        char *p = buf + have, *pe, *eof = 0;
+        char *p = buf + have, *pe;
         int len, space = BUFSIZE - have;
 
         if (!space)
@@ -191,7 +191,6 @@ void parser(const char *filename, inapt_block *top_block)
         pe = p + len;
 
         if (!len) {
-            eof = pe;
             done = 1;
         }
 
