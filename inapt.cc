@@ -381,8 +381,12 @@ static void exec_actions(std::vector<inapt_package *> *final_actions) {
 
     if (cache->BrokenCount()) {
         pkgProblemResolver fix (cache);
-        for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++)
-            fix.Protect((*i)->pkg);
+        for (vector<inapt_package *>::iterator i = final_actions->begin(); i < final_actions->end(); i++) {
+            pkgCache::PkgIterator k = (*i)->pkg;
+            if (k.end())
+                continue;
+            fix.Protect(k);
+        }
         fix.Resolve();
 
         if (cache->BrokenCount()) {
